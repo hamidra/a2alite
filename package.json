@@ -1,0 +1,33 @@
+{
+  "name": "front-agent",
+  "version": "0.1.0",
+  "description": "An Modular Agent to Agent(A2A) Framework",
+  "keywords": [
+    "A2A",
+    "AI",
+    "Agents",
+    "AI",
+    "LLM",
+    "Agent to Agent"
+  ],
+  "license": "Apache-2.0",
+  "author": "Hamid Alipour",
+  "type": "module",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": "./dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest"
+  },
+  "devDependencies": {
+    "typescript": "^5.8.3"
+  },
+  "dependencies": {
+    "@hono/node-server": "^1.14.4",
+    "hono": "^4.7.11",
+    "uuid": "^11.1.0",
+    "zod": "^3.25.30"
+  }
+}
