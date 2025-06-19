@@ -1231,6 +1231,11 @@ export const SendMessageSuccessResponseSchema = z.object({
 export type SendMessageSuccessResponse = z.infer<
   typeof SendMessageSuccessResponseSchema
 >;
+export const SendMessageResponseSchema = z.union([
+  SendMessageSuccessResponseSchema,
+  JSONRPCErrorResponseSchema,
+]);
+export type SendMessageResponse = z.infer<typeof SendMessageResponseSchema>;
 
 /**
  * JSON-RPC success response for streaming a message.
@@ -1257,7 +1262,6 @@ export const SendStreamingMessageSuccessResponseSchema = z.object({
 export type SendStreamingMessageSuccessResponse = z.infer<
   typeof SendStreamingMessageSuccessResponseSchema
 >;
-
 export const SendStreamingMessageResponseSchema = z.union([
   SendStreamingMessageSuccessResponseSchema,
   JSONRPCErrorResponseSchema,
@@ -1286,6 +1290,11 @@ export const GetTaskSuccessResponseSchema = z.object({
 export type GetTaskSuccessResponse = z.infer<
   typeof GetTaskSuccessResponseSchema
 >;
+export const GetTaskResponseSchema = z.union([
+  GetTaskSuccessResponseSchema,
+  JSONRPCErrorResponseSchema,
+]);
+export type GetTaskResponse = z.infer<typeof GetTaskResponseSchema>;
 
 /**
  * JSON-RPC success response for canceling a task.
@@ -1307,6 +1316,11 @@ export const CancelTaskSuccessResponseSchema = z.object({
 export type CancelTaskSuccessResponse = z.infer<
   typeof CancelTaskSuccessResponseSchema
 >;
+export const CancelTaskResponseSchema = z.union([
+  CancelTaskSuccessResponseSchema,
+  JSONRPCErrorResponseSchema,
+]);
+export type CancelTaskResponse = z.infer<typeof CancelTaskResponseSchema>;
 
 /**
  * JSON-RPC success response for setting push notification config.
@@ -1328,6 +1342,13 @@ export const SetTaskPushNotificationConfigSuccessResponseSchema = z.object({
 export type SetTaskPushNotificationConfigSuccessResponse = z.infer<
   typeof SetTaskPushNotificationConfigSuccessResponseSchema
 >;
+export const SetTaskPushNotificationConfigResponseSchema = z.union([
+  SetTaskPushNotificationConfigSuccessResponseSchema,
+  JSONRPCErrorResponseSchema,
+]);
+export type SetTaskPushNotificationConfigResponse = z.infer<
+  typeof SetTaskPushNotificationConfigResponseSchema
+>;
 
 /**
  * JSON-RPC success response for getting push notification config.
@@ -1348,6 +1369,13 @@ export const GetTaskPushNotificationConfigSuccessResponseSchema = z.object({
 });
 export type GetTaskPushNotificationConfigSuccessResponse = z.infer<
   typeof GetTaskPushNotificationConfigSuccessResponseSchema
+>;
+export const GetTaskPushNotificationConfigResponseSchema = z.union([
+  GetTaskPushNotificationConfigSuccessResponseSchema,
+  JSONRPCErrorResponseSchema,
+]);
+export type GetTaskPushNotificationConfigResponse = z.infer<
+  typeof GetTaskPushNotificationConfigResponseSchema
 >;
 
 // --- UNION TYPES (A2AError, A2ARequest, etc) ---

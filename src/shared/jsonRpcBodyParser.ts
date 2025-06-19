@@ -1,13 +1,6 @@
 import { IncomingMessage, ServerResponse } from "http";
-import { A2AServer } from "../server/index.ts";
-import { JSONParseError } from "../types/errors.ts";
+import { jsonParseError, invalidRequestError } from "../utils/errors.ts";
 import {
-  jsonParseError,
-  internalError,
-  invalidRequestError,
-} from "../utils/errors.ts";
-import {
-  isJSONRPCError,
   JSONRPCError,
   JSONRPCRequest,
   JSONRPCRequestSchema,
@@ -19,25 +12,23 @@ import {
 export async function jsonRpcBodyParser(
   body: string
 ): Promise<JSONRPCRequest | JSONRPCError> {
-  return new Promise((resolve) => {
-    if (!body) {
-      return resolve(jsonParseError("Empty request body"));
+  if (!body) {
+    return jsonParseError("Empty request body");
+  }
+  try {
+    let json = JSON.parse(body);
+    // parse the JSON body into a JSONRPCRequest
+    let jsonRpcRequest = JSONRPCRequestSchema.safeParse(json);
+    if (jsonRpcRequest.success) {
+      // If validation succeeds, return the parsed JSON-RPC request
+      return jsonRpcRequest.data;
+    } else {
+      // If validation fails, return a JSONParseError with the validation issues
+      return invalidRequestError("Invalid JSON-RPC request");
     }
-    try {
-      let json = JSON.parse(body);
-      // parse the JSON body into a JSONRPCRequest
-      let jsonRpcRequest = JSONRPCRequestSchema.safeParse(json);
-      if (jsonRpcRequest.success) {
-        // If validation succeeds, return the parsed JSON-RPC request
-        return resolve(jsonRpcRequest.data);
-      } else {
-        // If validation fails, return a JSONParseError with the validation issues
-        return resolve(invalidRequestError("Invalid JSON-RPC request"));
-      }
-    } catch (err) {
-      return resolve(jsonParseError("Invalid json in the body"));
-    }
-  });
+  } catch (err) {
+    return jsonParseError("Invalid json in the body");
+  }
 }
 
 /**

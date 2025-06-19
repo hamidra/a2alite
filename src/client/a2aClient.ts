@@ -1,0 +1,167 @@
+import {
+  MessageSendParams,
+  SendMessageSuccessResponse,
+  GetTaskSuccessResponse,
+  CancelTaskSuccessResponse,
+  SendStreamingMessageSuccessResponse,
+  TaskQueryParams,
+  TaskIdParams,
+  JSONRPCError,
+  JSONRPCRequest,
+  RequestsByMethod,
+  SendMessageResponseSchema,
+  GetTaskResponseSchema,
+  CancelTaskResponseSchema,
+  SendStreamingMessageResponseSchema,
+  SendStreamingMessageResponse,
+} from "../types/types.ts";
+
+import z from "zod/v4";
+
+export class A2AClient {
+  private url: string;
+  private idCounter: number = 0;
+
+  constructor(url: string) {
+    this.url = url;
+  }
+
+  private async jsonRpcRequest<M extends keyof RequestsByMethod>(
+    method: M,
+    params: RequestsByMethod[M]["params"]
+  ): Promise<Response> {
+    const payload: JSONRPCRequest = {
+      jsonrpc: "2.0",
+      method,
+      params,
+      id: this.idCounter++,
+    };
+    const response = await fetch(this.url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    });
+    return response;
+  }
+
+  async sendMessage(
+    params: MessageSendParams
+  ): Promise<SendMessageSuccessResponse["result"] | JSONRPCError> {
+    const response = await this.jsonRpcRequest("message/send", params);
+    const bodyText = await response.text();
+    if (!bodyText) {
+      throw new Error("Empty response body");
+    }
+    let json = JSON.parse(bodyText);
+    let jsonRpcResponse = SendMessageResponseSchema.parse(json);
+    if ("error" in jsonRpcResponse) {
+      return jsonRpcResponse.error;
+    }
+    return jsonRpcResponse.result;
+  }
+
+  async getTask(
+    params: TaskQueryParams
+  ): Promise<GetTaskSuccessResponse["result"] | JSONRPCError> {
+    const response = await this.jsonRpcRequest("tasks/get", params);
+    const bodyText = await response.text();
+    if (!bodyText) {
+      throw new Error("Empty response body");
+    }
+    let json = JSON.parse(bodyText);
+    let jsonRpcResponse = GetTaskResponseSchema.parse(json);
+    if ("error" in jsonRpcResponse) {
+      return jsonRpcResponse.error;
+    } else return jsonRpcResponse.result;
+  }
+
+  async cancelTask(
+    params: TaskIdParams
+  ): Promise<CancelTaskSuccessResponse["result"] | JSONRPCError> {
+    const response = await this.jsonRpcRequest("tasks/cancel", params);
+    const bodyText = await response.text();
+    if (!bodyText) {
+      throw new Error("Empty response body");
+    }
+    let json = JSON.parse(bodyText);
+    let jsonRpcResponse = CancelTaskResponseSchema.parse(json);
+    if ("error" in jsonRpcResponse) {
+      return jsonRpcResponse.error;
+    } else return jsonRpcResponse.result;
+  }
+
+  async *streamMessages(
+    params: MessageSendParams
+  ): AsyncGenerator<
+    SendStreamingMessageSuccessResponse["result"] | JSONRPCError | undefined
+  > {
+    // POST the JSON-RPC request to this.url and process the SSE stream from the response
+    const payload: JSONRPCRequest = {
+      jsonrpc: "2.0",
+      method: "message/stream",
+      params,
+      id: this.idCounter++,
+    };
+    const res = await fetch(this.url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "text/event-stream",
+      },
+      body: JSON.stringify(payload),
+    });
+    if (!res.body) throw new Error("No response body for SSE stream");
+    for await (const eventText of this.parseSSEStream(res.body)) {
+      if (!eventText) continue;
+      let parsed: SendStreamingMessageResponse;
+      try {
+        let json = JSON.parse(eventText);
+        parsed = SendStreamingMessageResponseSchema.parse(json);
+      } catch (e) {
+        // log warning
+        // console.warn("Invalid JSON-RPC response");
+        continue;
+      }
+      if ("error" in parsed) {
+        throw parsed.error;
+      }
+      if ("result" in parsed) {
+        yield parsed.result;
+      } else {
+        yield undefined;
+      }
+    }
+  }
+
+  // Helper to parse SSE events from a ReadableStream
+  private async *parseSSEStream(
+    stream: ReadableStream<Uint8Array>
+  ): AsyncGenerator<string> {
+    const decoder = new TextDecoder();
+    const reader = stream.getReader();
+    let buffer = "";
+    try {
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        let eventEnd;
+        while ((eventEnd = buffer.indexOf("\n\n")) !== -1) {
+          const rawEvent = buffer.slice(0, eventEnd);
+          buffer = buffer.slice(eventEnd + 2);
+          // Only process lines starting with 'data:'
+          const dataLine = rawEvent
+            .split("\n")
+            .find((line) => line.startsWith("data:"));
+          if (dataLine) {
+            yield dataLine.slice(5).trim();
+          }
+        }
+      }
+    } finally {
+      reader.releaseLock();
+    }
+  }
+}
