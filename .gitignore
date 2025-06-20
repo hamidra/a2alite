@@ -143,3 +143,6 @@ dist
 
 # ignore .store folder
 .store/
+
+# ignore prompts folder
+prompts/

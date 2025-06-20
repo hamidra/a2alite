@@ -5,18 +5,22 @@ type PopulatedMessage = Omit<
   Message,
   "taskId" | "referenceTaskIds" | "parts"
 > & {
-  task: Task;
-  referenceTasks: Task[];
   text: string;
   files: File[];
-  data: Record<string, any>;
+  data: Array<Record<string, any>>;
 };
 
-export type AgentRequest = {
-  message: PopulatedMessage;
-  messageConfiguration: MessageSendConfiguration;
-  httpContext: {
-    request: Request;
-    extension: Record<string, any>;
+export function populateMessage(message: Message): PopulatedMessage {
+  return {
+    ...message,
+    text: message.parts
+      .filter((part) => part.kind === "text")
+      .map((part) => part.text)
+      .join("\n"),
+    // TODO: implement files
+    files: [],
+    data: message.parts
+      .filter((part) => part.kind === "data")
+      .map((part) => part.data),
   };
-};
+}

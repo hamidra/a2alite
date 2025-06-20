@@ -16,14 +16,17 @@ import {
   SendStreamingMessageResponse,
 } from "../types/types.ts";
 
-import z from "zod/v4";
-
 export class A2AClient {
   private url: string;
-  private idCounter: number = 0;
+  private static idCounter: number = 0;
+  private static idCounterBound: number = 1000000;
 
   constructor(url: string) {
     this.url = url;
+  }
+
+  private static getNewId() {
+    return A2AClient.idCounter++ % A2AClient.idCounterBound;
   }
 
   private async jsonRpcRequest<M extends keyof RequestsByMethod>(
@@ -34,7 +37,7 @@ export class A2AClient {
       jsonrpc: "2.0",
       method,
       params,
-      id: this.idCounter++,
+      id: A2AClient.getNewId(),
     };
     const response = await fetch(this.url, {
       method: "POST",
@@ -92,7 +95,7 @@ export class A2AClient {
     } else return jsonRpcResponse.result;
   }
 
-  async *streamMessages(
+  async *sendStreamMessage(
     params: MessageSendParams
   ): AsyncGenerator<
     SendStreamingMessageSuccessResponse["result"] | JSONRPCError | undefined
@@ -102,7 +105,7 @@ export class A2AClient {
       jsonrpc: "2.0",
       method: "message/stream",
       params,
-      id: this.idCounter++,
+      id: A2AClient.getNewId(),
     };
     const res = await fetch(this.url, {
       method: "POST",
