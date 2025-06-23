@@ -7,7 +7,7 @@ import { taskNotCancelableError } from "../../utils/errors.ts";
 import { Part, Task } from "../../types/types.ts";
 import { AgentExecutionContext } from "../../agent/context.ts";
 
-// Dummy executor implementing IAgentExecutor
+// Echo executor implementing IAgentExecutor
 class EchoAgentExecutor implements IAgentExecutor {
   static messageMemory = new Map<string, string>();
 
@@ -44,7 +44,7 @@ class EchoAgentExecutor implements IAgentExecutor {
             parts: [
               {
                 kind: "text",
-                text: "Please enter a valid number.",
+                text: "Please provide a valid number.",
               },
             ],
           },

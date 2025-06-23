@@ -100,9 +100,6 @@ export class MessageHandler {
   }
 
   getMessage(): Message {
-    if (!this.message.contextId) {
-      throw new Error("Context ID is required for message");
-    }
     return { ...this.message };
   }
 
