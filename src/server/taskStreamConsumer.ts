@@ -90,6 +90,8 @@ export class TaskStreamConsumer {
           break;
         }
 
+        // ToDo: update the task state in the store, if the event is a task update or artifact update.
+
         // yield the event
         yield event;
 

@@ -253,6 +253,7 @@ export class A2AServer {
           result: result,
         };
       }
+
       // If stream: yield the current task, consume EventQueue and stream updates
       if (result.kind === "stream") {
         let { taskStream, currentTask } = result;
