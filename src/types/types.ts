@@ -272,7 +272,7 @@ export const AgentSkillSchema = z.object({
    */
   outputModes: z.array(z.string()).optional(),
   /**
-   * Set of tagwords describing classes of capabilities for this specific skill.
+   * Set of tags describing classes of capabilities for this specific skill.
    */
   tags: z.array(z.string()),
 });

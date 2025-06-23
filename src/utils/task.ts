@@ -18,13 +18,15 @@ export class TaskHandler {
       id: baseTask?.id || uuidv4(),
       kind: "task",
       contextId: baseTask?.contextId || undefined,
-      status: baseTask?.status || {
-        state: "submitted" as TaskState,
-        timestamp: new Date().toISOString(),
-      },
-      artifacts: baseTask?.artifacts || [],
-      history: baseTask?.history || [],
-      metadata: baseTask?.metadata || {},
+      status: baseTask?.status
+        ? { ...baseTask.status }
+        : {
+            state: "submitted" as TaskState,
+            timestamp: new Date().toISOString(),
+          },
+      artifacts: baseTask?.artifacts ? [...baseTask.artifacts] : [],
+      history: baseTask?.history ? [...baseTask.history] : [],
+      metadata: baseTask?.metadata ? { ...baseTask.metadata } : {},
     };
   }
 
@@ -43,6 +45,15 @@ export class TaskHandler {
       ...status,
       timestamp: status.timestamp || new Date().toISOString(),
     };
+    // update message taskId and contextId if message is set
+    if (status.message) {
+      this.task.status.message = {
+        ...status.message,
+        taskId: this.task.id,
+        contextId: this.task.contextId,
+      };
+    }
+
     return this;
   }
 
@@ -63,7 +74,7 @@ export class TaskHandler {
     return this;
   }
 
-  upsertArtifact(artifact: Artifact): TaskHandler {
+  upsertArtifact(artifact: Artifact, append: boolean = false): TaskHandler {
     if (!this.task.artifacts) {
       this.task.artifacts = [];
     }
@@ -72,12 +83,13 @@ export class TaskHandler {
       (a: Artifact) => a.artifactId === artifact.artifactId
     );
 
-    // ToDo: handle append and lastChunk, maybe using a helper function
+    // ToDo: find out how the artifacts parts are aggregated if an artifacts has multimodal parts with chunks.
     if (existingIndex !== -1) {
-      this.task.artifacts[existingIndex] = {
-        ...this.task.artifacts[existingIndex],
-        ...artifact,
-      };
+      if (append) {
+        this.task.artifacts[existingIndex].parts.push(...artifact.parts);
+      } else {
+        this.task.artifacts[existingIndex] = artifact;
+      }
     } else {
       this.task.artifacts.push(artifact);
     }
@@ -86,8 +98,7 @@ export class TaskHandler {
 
   handleArtifactUpdate(event: TaskArtifactUpdateEvent): TaskHandler {
     if (event.taskId !== this.task.id) return this;
-
-    return this.upsertArtifact(event.artifact);
+    return this.upsertArtifact(event.artifact, event.append);
   }
 
   withMetadata(metadata: Record<string, any>): TaskHandler {
