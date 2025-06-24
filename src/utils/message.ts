@@ -56,6 +56,11 @@ export class MessageHandler {
     return this;
   }
 
+  addParts(parts: Part[]): MessageHandler {
+    this.message.parts.push(...parts);
+    return this;
+  }
+
   addTextPart(text: string, metadata?: Record<string, any>): MessageHandler {
     this.message.parts.push({
       kind: "text",

@@ -102,10 +102,7 @@ export class TaskHandler {
   }
 
   withMetadata(metadata: Record<string, any>): TaskHandler {
-    this.task.metadata = {
-      ...this.task.metadata,
-      ...metadata,
-    };
+    this.task.metadata = metadata;
     return this;
   }
 
