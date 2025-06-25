@@ -61,6 +61,8 @@ class EchoAgentExecutor implements IAgentExecutor {
               append: true,
               lastChunk: i === echoCount - 1,
             });
+            // sleep for 1000ms
+            await new Promise((resolve) => setTimeout(resolve, 1000));
           }
           stream.complete({});
         } else {

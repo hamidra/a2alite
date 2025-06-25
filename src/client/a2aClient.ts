@@ -118,6 +118,7 @@ export class A2AClient {
 
     if (!res.body) throw new Error("No response body for SSE stream");
     for await (const eventText of this.parseSSEStream(res.body)) {
+      console.log("streaming eventText", eventText);
       if (!eventText) continue;
       let parsed: SendStreamingMessageResponse;
       try {
@@ -126,7 +127,54 @@ export class A2AClient {
       } catch (e) {
         // TODO: log warning
         console.warn("Invalid JSON-RPC response", e);
-        //continue;
+        continue;
+      }
+      if ("error" in parsed) {
+        throw parsed.error;
+      }
+      if ("result" in parsed) {
+        yield parsed.result;
+      } else {
+        // TODO: log warning
+        yield undefined;
+      }
+    }
+  }
+
+  // TODO: refactor the common code with the sendStreamMessage method in a single private method to be used by both methods
+  async *resubscribeTask(
+    params: TaskIdParams
+  ): AsyncGenerator<
+    SendStreamingMessageSuccessResponse["result"] | JSONRPCError | undefined
+  > {
+    // POST the JSON-RPC request to this.url and process the SSE stream from the response
+    const payload: JSONRPCRequest = {
+      jsonrpc: "2.0",
+      method: "tasks/resubscribe",
+      params,
+      id: A2AClient.getNewId(),
+    };
+    const res = await fetch(this.url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "text/event-stream",
+      },
+      body: JSON.stringify(payload),
+    });
+
+    if (!res.body) throw new Error("No response body for SSE stream");
+    for await (const eventText of this.parseSSEStream(res.body)) {
+      console.log("resubscribe eventText", eventText);
+      if (!eventText) continue;
+      let parsed: SendStreamingMessageResponse;
+      try {
+        let json = JSON.parse(eventText);
+        parsed = SendStreamingMessageResponseSchema.parse(json);
+      } catch (e) {
+        // TODO: log warning
+        console.warn("Invalid JSON-RPC response", e);
+        continue;
       }
       if ("error" in parsed) {
         throw parsed.error;

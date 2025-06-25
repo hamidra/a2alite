@@ -1,6 +1,5 @@
 import { MessageHandler } from "../../utils/message.ts";
 import { A2AClient } from "../../client/a2aClient.ts";
-import { isJSONRPCError } from "src/types/types.ts";
 
 const client = new A2AClient("http://localhost:3000/a2a");
 
