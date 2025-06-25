@@ -2,7 +2,7 @@ import {
   Task,
   TaskNotFoundError,
   TaskNotCancelableError,
-} from "../types/types.ts";
+} from "../../types/types.ts";
 import { AgentExecutionContext } from "./context.ts";
 import type { AgentExecutionResult } from "./types.ts";
 

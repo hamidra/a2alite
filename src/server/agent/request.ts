@@ -1,5 +1,5 @@
-import { Message, MessageSendConfiguration } from "../types/types.ts";
-import { Task } from "../types/types.ts";
+import { Message, MessageSendConfiguration } from "../../types/types.ts";
+import { Task } from "../../types/types.ts";
 
 type PopulatedMessage = Omit<
   Message,

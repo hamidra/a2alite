@@ -1,10 +1,10 @@
-import { createHonoApp } from "../../http/hono/hono.ts";
+import { createHonoApp } from "../../server/http/hono/hono.ts";
 import { serve } from "@hono/node-server";
 import { A2AServer } from "../../server/index.ts";
-import { IAgentExecutor } from "../../agent/executor.ts";
+import { IAgentExecutor } from "../../server/agent/executor.ts";
 import { taskNotCancelableError } from "../../utils/errors.ts";
 import { Part, Task } from "../../types/types.ts";
-import { AgentExecutionContext } from "../../agent/context.ts";
+import { AgentExecutionContext } from "../../server/agent/context.ts";
 import { createTextPart } from "../../utils/part.ts";
 import { MessageHandler } from "../../utils/message.ts";
 

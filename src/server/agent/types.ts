@@ -7,7 +7,7 @@ import type {
   A2AError,
   SendStreamingMessageSuccessResponse,
   JSONRPCError,
-} from "../types/types.ts";
+} from "../../types/types.ts";
 import { AgentTaskStream } from "./stream.ts";
 import type { IQueue } from "../providers/queue/queue.ts";
 import type { IStore } from "../providers/storage/index.ts";

@@ -1,9 +1,9 @@
 import { Hono } from "hono";
-import { A2AServer } from "../../server/index.ts";
+import { A2AServer } from "../../index.ts";
 import { IAgentExecutor } from "../../agent/executor.ts";
-import { jsonRpcBodyParser } from "../../shared/jsonRpcBodyParser.ts";
-import { isJSONRPCError } from "../../types/types.ts";
-import { internalError } from "../../utils/errors.ts";
+import { jsonRpcBodyParser } from "../../../shared/jsonRpcBodyParser.ts";
+import { isJSONRPCError } from "../../../types/types.ts";
+import { internalError } from "../../../utils/errors.ts";
 import { streamSSE } from "hono/streaming";
 
 export async function createHonoApp({ a2aServer }: { a2aServer: A2AServer }) {

@@ -1,4 +1,4 @@
-import type { Task, Message, TaskState } from "../types/types.ts";
+import type { Task, Message, TaskState } from "../../types/types.ts";
 
 import { v4 as uuidv4 } from "uuid";
 

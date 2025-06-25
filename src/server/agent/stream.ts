@@ -5,7 +5,7 @@ import type {
 } from "./types.ts";
 import { AgentExecutionContext } from "./context.ts";
 import type { AgentStreamEvent } from "./types.ts";
-import { isJSONRPCError, Task, TaskState } from "../types/types.ts";
+import { isJSONRPCError, Task, TaskState } from "../../types/types.ts";
 
 const END_OF_STREAM_EVENT = "end-of-stream";
 

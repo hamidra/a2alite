@@ -2,18 +2,18 @@ import {
   JSONRPCServer,
   type HandlerResponse,
 } from "../shared/jsonRpcServer.ts";
-import type { IStore } from "../providers/storage/index.ts";
+import type { IStore } from "./providers/storage/index.ts";
 import type {
   TaskStoreFactory,
   StreamQueueFactory,
   AgentStreamEvent,
   AgentExecutionResult,
   AgentRequest,
-} from "../agent/types.ts";
-import type { IAgentExecutor } from "../agent/executor.ts";
-import { AgentExecutionContext } from "../agent/context.ts";
-import { InMemoryStore } from "../providers/storage/in_memory.ts";
-import { InMemoryQueue } from "../providers/queue/in_memory.ts";
+} from "./agent/types.ts";
+import type { IAgentExecutor } from "./agent/executor.ts";
+import { AgentExecutionContext } from "./agent/context.ts";
+import { InMemoryStore } from "./providers/storage/in_memory.ts";
+import { InMemoryQueue } from "./providers/queue/in_memory.ts";
 import {
   internalError,
   invalidAgentResponseError,
@@ -39,7 +39,7 @@ import {
   SendMessageRequest,
   SendStreamingMessageRequest,
 } from "../types/types.ts";
-import { isEndOfStream } from "../agent/stream.ts";
+import { isEndOfStream } from "./agent/stream.ts";
 
 // Placeholder types for telemetry and logging
 // Replace with actual implementations when available

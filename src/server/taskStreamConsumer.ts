@@ -7,8 +7,8 @@
  * - When the stream ends, all tappers are notified and cleaned up.
  */
 
-import type { AgentStreamEvent, AgentStreamQueue } from "../agent/types.ts";
-import type { AgentTaskStream } from "../agent/stream.ts";
+import type { AgentStreamEvent, AgentStreamQueue } from "./agent/types.ts";
+import type { AgentTaskStream } from "./agent/stream.ts";
 
 /**
  * Represents a tapper/listener for the stream.
