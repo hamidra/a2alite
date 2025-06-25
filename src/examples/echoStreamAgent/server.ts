@@ -6,6 +6,9 @@ import { populateMessage } from "../../agent/request.ts";
 import { taskNotCancelableError } from "../../utils/errors.ts";
 import { Part, Task } from "../../types/types.ts";
 import { AgentExecutionContext } from "../../agent/context.ts";
+import { MessageHandler } from "../../utils/message.ts";
+import { createTextPart } from "../../utils/part.ts";
+import { ArtifactHandler } from "../../utils/artifact.ts";
 
 // Dummy executor implementing IAgentExecutor
 class EchoAgentExecutor implements IAgentExecutor {
@@ -18,14 +21,12 @@ class EchoAgentExecutor implements IAgentExecutor {
     // if no task is set, it is a new message, store message in memory and ask for number of times to echo
     if (!currentTask) {
       const task = await context.inputRequired({
-        message: {
-          parts: [
-            {
-              kind: "text",
-              text: "Hello!\nHow many times would you like me to echo your message?",
-            },
-          ],
-        },
+        message: new MessageHandler()
+          .withRole("agent")
+          .addTextPart(
+            "Hello!\nHow many times would you like me to echo your message?"
+          )
+          .getMessage(),
       });
       // store message in memory to be used for echo
       EchoAgentExecutor.messageMemory.set(task.id, message.text);
@@ -40,60 +41,46 @@ class EchoAgentExecutor implements IAgentExecutor {
       // if not a number, ask for a number
       if (isNaN(echoCount)) {
         const task = await context.inputRequired({
-          message: {
-            parts: [
-              {
-                kind: "text",
-                text: "Please enter a valid number.",
-              },
-            ],
-          },
+          message: new MessageHandler()
+            .withRole("agent")
+            .addTextPart("Please enter a valid number.")
+            .getMessage(),
         });
         return task;
       }
       // echo message
-      const echoMessage = EchoAgentExecutor.messageMemory.get(currentTask.id);
-
-      if (!echoMessage) {
-        return context.reject({
-          message: {
-            parts: [
-              {
-                kind: "text",
-                text: "The message to echo was not found.",
-              },
-            ],
-          },
-        });
-      }
-
-      let parts: Part[] = [];
-      for (let i = 0; i < echoCount; i++) {
-        parts.push({
-          kind: "text",
-          text: echoMessage,
-        });
-      }
-
-      return context.complete({
-        artifacts: [
-          {
-            artifactId: "artifact-1",
-            parts,
-          },
+      return await context.stream(async (stream) => {
+        const echoMessage = EchoAgentExecutor.messageMemory.get(currentTask.id);
+        if (echoMessage) {
+          for (let i = 0; i < echoCount; i++) {
+            await stream.writeArtifact({
+              artifact: new ArtifactHandler()
+                .withId("artifact-1")
+                .addParts([createTextPart(echoMessage)])
+                .getArtifact(),
+              append: true,
+              lastChunk: i === echoCount - 1,
+            });
+          }
+          stream.complete({});
+        } else {
+          stream.reject({
+            message: new MessageHandler()
+              .withRole("agent")
+              .addTextPart("The message to echo was not found.")
+              .getMessage(),
+          });
+        }
+      });
+    } else {
+      return context.message({
+        parts: [
+          createTextPart(
+            `The task is currently in ${currentTask.status.state} state. Not expecting any input in this state.`
+          ),
         ],
       });
     }
-
-    // the task is not expecting any input
-    return context.message({
-      parts: [
-        {
-          kind: "text",
-          text: `The task is currently in ${currentTask.status.state} state. Not expecting any input in this state.`,
-        },
-      ],
-    });
   }
 
   async cancel(task: Task) {

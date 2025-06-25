@@ -1,5 +1,4 @@
-import { MessageHandler } from "src/utils/message.ts";
-import { populateMessage } from "../../agent/request.ts";
+import { MessageHandler } from "../../utils/message.ts";
 import { A2AClient } from "../../client/a2aClient.ts";
 
 const client = new A2AClient("http://localhost:3000/a2a");
@@ -59,6 +58,8 @@ async function run() {
             }
           }
         }
+      } else {
+        console.log(result);
       }
     }
   }

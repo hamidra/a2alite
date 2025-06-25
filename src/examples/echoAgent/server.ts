@@ -2,10 +2,11 @@ import { createHonoApp } from "../../http/hono/hono.ts";
 import { serve } from "@hono/node-server";
 import { A2AServer } from "../../server/index.ts";
 import { IAgentExecutor } from "../../agent/executor.ts";
-import { populateMessage } from "../../agent/request.ts";
 import { taskNotCancelableError } from "../../utils/errors.ts";
 import { Part, Task } from "../../types/types.ts";
 import { AgentExecutionContext } from "../../agent/context.ts";
+import { createTextPart } from "../../utils/part.ts";
+import { MessageHandler } from "../../utils/message.ts";
 
 // Echo executor implementing IAgentExecutor
 class EchoAgentExecutor implements IAgentExecutor {
@@ -13,22 +14,21 @@ class EchoAgentExecutor implements IAgentExecutor {
 
   async execute(context: AgentExecutionContext) {
     let currentTask = context.currentTask;
-    let message = populateMessage(context.request.params.message);
+    let message = new MessageHandler(context.request.params.message);
 
     // if no task is set, it is a new message, store message in memory and ask for number of times to echo
     if (!currentTask) {
       const task = await context.inputRequired({
         message: {
           parts: [
-            {
-              kind: "text",
-              text: "Hello!\nHow many times would you like me to echo your message?",
-            },
+            createTextPart(
+              "Hello!\nHow many times would you like me to echo your message?"
+            ),
           ],
         },
       });
       // store message in memory to be used for echo
-      EchoAgentExecutor.messageMemory.set(task.id, message.text);
+      EchoAgentExecutor.messageMemory.set(task.id, message.getText());
       return task;
     }
 
@@ -36,17 +36,12 @@ class EchoAgentExecutor implements IAgentExecutor {
 
     // check if the current task is waiting for input
     if (currentTask.status.state === "input-required") {
-      const echoCount = parseInt(message.text);
+      const echoCount = parseInt(message.getText());
       // if not a number, ask for a number
       if (isNaN(echoCount)) {
         const task = await context.inputRequired({
           message: {
-            parts: [
-              {
-                kind: "text",
-                text: "Please provide a valid number.",
-              },
-            ],
+            parts: [createTextPart("Please provide a valid number.")],
           },
         });
         return task;
@@ -57,22 +52,14 @@ class EchoAgentExecutor implements IAgentExecutor {
       if (!echoMessage) {
         return context.reject({
           message: {
-            parts: [
-              {
-                kind: "text",
-                text: "The message to echo was not found.",
-              },
-            ],
+            parts: [createTextPart("The message to echo was not found.")],
           },
         });
       }
 
       let parts: Part[] = [];
       for (let i = 0; i < echoCount; i++) {
-        parts.push({
-          kind: "text",
-          text: echoMessage,
-        });
+        parts.push(createTextPart(echoMessage));
       }
 
       return context.complete({
@@ -88,10 +75,9 @@ class EchoAgentExecutor implements IAgentExecutor {
     // the task is not expecting any input
     return context.message({
       parts: [
-        {
-          kind: "text",
-          text: `The task is currently in ${currentTask.status.state} state. Not expecting any input in this state.`,
-        },
+        createTextPart(
+          `The task is currently in ${currentTask.status.state} state. Not expecting any input in this state.`
+        ),
       ],
     });
   }
