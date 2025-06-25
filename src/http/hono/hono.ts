@@ -28,7 +28,6 @@ export async function createHonoApp({ a2aServer }: { a2aServer: A2AServer }) {
       }
       // Handle request
       const result = await a2aServer.handleRequest(parsed);
-
       if (result.response) {
         return c.json(result.response);
       } else if (result.stream) {
@@ -36,7 +35,7 @@ export async function createHonoApp({ a2aServer }: { a2aServer: A2AServer }) {
         // Use Hono's StreamSSE helper for SSE
         return streamSSE(c, async (sse) => {
           for await (const jsonRpcResponse of stream) {
-            sse.writeSSE({ data: JSON.stringify(jsonRpcResponse) });
+            await sse.writeSSE({ data: JSON.stringify(jsonRpcResponse) });
           }
         });
       } else {

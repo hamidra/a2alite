@@ -9,7 +9,6 @@
 
 import type { AgentStreamEvent, AgentStreamQueue } from "../agent/types.ts";
 import type { AgentTaskStream } from "../agent/stream.ts";
-import type { IQueue } from "../providers/queue/queue.ts";
 
 /**
  * Represents a tapper/listener for the stream.
@@ -90,6 +89,11 @@ export class TaskStreamConsumer {
           break;
         }
 
+        // if the event is the end of stream, break and do not continue
+        if (this.isEndOfStreamEvent(event)) {
+          break;
+        }
+
         // ToDo: update the task state in the store, if the event is a task update or artifact update.
 
         // yield the event
@@ -104,13 +108,11 @@ export class TaskStreamConsumer {
             tapper.queue.push(event);
           }
         }
-        if (this.isEndOfStreamEvent(event)) {
-          break;
-        }
       }
     } catch (err) {
       // ToDo: Notify all tappers of error/end
     } finally {
+      // set the stream as finished and notify all tappers and clean up
       this.finished = true;
       for (const tapper of this.tappers) {
         if (tapper.resolve) {
@@ -157,7 +159,7 @@ export class TaskStreamManager {
   ): AsyncGenerator<AgentStreamEvent> {
     let consumer = this.consumers.get(taskStream.getTask().id);
     if (consumer) {
-      // if the consumer is already created and tap into it
+      // if the consumer is already created tap into it
       return consumer.tap();
     } else {
       // if the consumer is not created, create it and kick off the consumer

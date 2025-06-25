@@ -230,14 +230,14 @@ export class A2AServer {
         requestAbortSignal,
         extension
       );
-
       if (isJSONRPCError(result)) {
         // return an error
-        return {
+        yield {
           jsonrpc: "2.0",
           id: request.id,
           error: result,
         };
+        return;
       }
 
       // If Task or Message yield the only result
@@ -247,11 +247,12 @@ export class A2AServer {
           await this._taskStore.set(result.id, result);
         }
         // return the result
-        return {
+        yield {
           jsonrpc: "2.0",
           id: request.id,
           result: result,
         };
+        return;
       }
 
       // If stream: yield the current task, consume EventQueue and stream updates
@@ -281,7 +282,7 @@ export class A2AServer {
         }
       }
     } catch (error) {
-      return {
+      yield {
         jsonrpc: "2.0",
         id: request.id,
         error: isJSONRPCError(error)
@@ -443,20 +444,22 @@ export class A2AServer {
 
       task = await this._taskStore.get(request.params.id);
       if (!task) {
-        return {
+        yield {
           jsonrpc: "2.0",
           id: request.id,
           error: taskNotFoundError(`Task ${request.params.id} not found`),
         };
+        return;
       } else {
         const ongoingConsumer = this._taskStreamManager.getConsumer(task.id);
         // if there is no consumer, fail since the task is not active
         if (!ongoingConsumer) {
-          return {
+          yield {
             jsonrpc: "2.0",
             id: request.id,
             error: taskNotFoundError(`Task ${request.params.id} is not active`),
           };
+          return;
         }
 
         // tab into the ongoing consumer and yield the events as they come
@@ -469,7 +472,7 @@ export class A2AServer {
         }
       }
     } catch (error) {
-      return {
+      yield {
         jsonrpc: "2.0",
         id: request.id,
         error: isJSONRPCError(error)

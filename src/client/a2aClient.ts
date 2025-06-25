@@ -115,6 +115,7 @@ export class A2AClient {
       },
       body: JSON.stringify(payload),
     });
+
     if (!res.body) throw new Error("No response body for SSE stream");
     for await (const eventText of this.parseSSEStream(res.body)) {
       if (!eventText) continue;
@@ -123,9 +124,9 @@ export class A2AClient {
         let json = JSON.parse(eventText);
         parsed = SendStreamingMessageResponseSchema.parse(json);
       } catch (e) {
-        // log warning
-        // console.warn("Invalid JSON-RPC response");
-        continue;
+        // TODO: log warning
+        console.warn("Invalid JSON-RPC response", e);
+        //continue;
       }
       if ("error" in parsed) {
         throw parsed.error;
@@ -133,6 +134,7 @@ export class A2AClient {
       if ("result" in parsed) {
         yield parsed.result;
       } else {
+        // TODO: log warning
         yield undefined;
       }
     }
@@ -148,6 +150,7 @@ export class A2AClient {
     try {
       while (true) {
         const { value, done } = await reader.read();
+
         if (done) break;
         buffer += decoder.decode(value, { stream: true });
         let eventEnd;
