@@ -14,6 +14,7 @@ const END_OF_STREAM_EVENT = "end-of-stream";
  */
 export const isFinalTaskState = (state: TaskState) =>
   ["completed", "failed", "canceled", "rejected"].includes(state);
+
 /**
  * Checks if a task state is pending (e.g. input-required, auth-required).
  */
