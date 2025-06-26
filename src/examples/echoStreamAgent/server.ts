@@ -9,6 +9,28 @@ import { AgentExecutionContext } from "../../server/agent/context.ts";
 import { MessageHandler } from "../../utils/message.ts";
 import { createTextPart } from "../../utils/part.ts";
 import { ArtifactHandler } from "../../utils/artifact.ts";
+import { AgentCard } from "../../types/types.ts";
+
+const agentCard: AgentCard = {
+  name: "Echo Agent",
+  description: "An echo agent that echoes your message.",
+  url: "http://localhost:3000/a2a",
+  version: "1.0.0",
+  capabilities: {
+    streaming: true,
+    pushNotifications: false,
+  },
+  skills: [
+    {
+      id: "echo",
+      name: "echo",
+      description: "Echoes your message.",
+      tags: ["echo"],
+    },
+  ],
+  defaultInputModes: ["text"],
+  defaultOutputModes: ["text"],
+};
 
 // Dummy executor implementing IAgentExecutor
 class EchoAgentExecutor implements IAgentExecutor {
@@ -92,7 +114,7 @@ class EchoAgentExecutor implements IAgentExecutor {
 
 const a2aServer = new A2AServer({
   agentExecutor: new EchoAgentExecutor(),
-  agentCard: {},
+  agentCard,
 });
 
 createHonoApp({ a2aServer })

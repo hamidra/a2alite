@@ -14,15 +14,46 @@ import {
   CancelTaskResponseSchema,
   SendStreamingMessageResponseSchema,
   SendStreamingMessageResponse,
+  AgentCardSchema,
+  AgentCard,
 } from "../types/types.ts";
 
+export async function fetchAgentCard(
+  baseUrl: string,
+  path: string = "/.well-known/agent.json"
+): Promise<AgentCard> {
+  try {
+    const agentCardUrl = new URL(path, baseUrl).href;
+    const response = await fetch(agentCardUrl);
+    if (!response.ok) {
+      throw new Error(`Failed to fetch agent card: ${response.statusText}`);
+    }
+    const agentCard = await response.json();
+    const parsed = AgentCardSchema.safeParse(agentCard);
+
+    if (!parsed.success) {
+      throw new Error(`Invalid agent card: ${parsed.error.message}`);
+    }
+    return parsed.data;
+  } catch (error) {
+    throw error;
+  }
+}
+
 export class A2AClient {
-  private url: string;
+  private _url: string;
+  private _agentCard: AgentCard;
   private static idCounter: number = 0;
   private static idCounterBound: number = 1000000;
 
-  constructor(url: string) {
-    this.url = url;
+  constructor(agentCard: AgentCard) {
+    // validate agent card
+    const parsed = AgentCardSchema.safeParse(agentCard);
+    if (!parsed.success) {
+      throw new Error(`Invalid agent card: ${parsed.error.message}`);
+    }
+    this._agentCard = parsed.data;
+    this._url = parsed.data.url;
   }
 
   private static getNewId() {
@@ -33,13 +64,16 @@ export class A2AClient {
     method: M,
     params: RequestsByMethod[M]["params"]
   ): Promise<Response> {
+    const url = this._url;
+
     const payload: JSONRPCRequest = {
       jsonrpc: "2.0",
       method,
       params,
       id: A2AClient.getNewId(),
     };
-    const response = await fetch(this.url, {
+
+    const response = await fetch(url, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -100,14 +134,14 @@ export class A2AClient {
   ): AsyncGenerator<
     SendStreamingMessageSuccessResponse["result"] | JSONRPCError | undefined
   > {
-    // POST the JSON-RPC request to this.url and process the SSE stream from the response
+    const url = this._url;
     const payload: JSONRPCRequest = {
       jsonrpc: "2.0",
       method: "message/stream",
       params,
       id: A2AClient.getNewId(),
     };
-    const res = await fetch(this.url, {
+    const res = await fetch(url, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -118,7 +152,6 @@ export class A2AClient {
 
     if (!res.body) throw new Error("No response body for SSE stream");
     for await (const eventText of this.parseSSEStream(res.body)) {
-      console.log("streaming eventText", eventText);
       if (!eventText) continue;
       let parsed: SendStreamingMessageResponse;
       try {
@@ -147,14 +180,14 @@ export class A2AClient {
   ): AsyncGenerator<
     SendStreamingMessageSuccessResponse["result"] | JSONRPCError | undefined
   > {
-    // POST the JSON-RPC request to this.url and process the SSE stream from the response
+    const url = this._url;
     const payload: JSONRPCRequest = {
       jsonrpc: "2.0",
       method: "tasks/resubscribe",
       params,
       id: A2AClient.getNewId(),
     };
-    const res = await fetch(this.url, {
+    const res = await fetch(url, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -217,5 +250,18 @@ export class A2AClient {
     } finally {
       reader.releaseLock();
     }
+  }
+
+  // getter for agent card
+  get agentCard(): AgentCard {
+    return this._agentCard!;
+  }
+
+  static async getClientFromUrl(
+    baseUrl: string,
+    path: string = "/.well-known/agent.json"
+  ): Promise<A2AClient> {
+    const agentCard = await fetchAgentCard(baseUrl, path);
+    return new A2AClient(agentCard);
   }
 }

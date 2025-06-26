@@ -1,9 +1,12 @@
 import { MessageHandler } from "../../utils/message.ts";
 import { A2AClient } from "../../client/a2aClient.ts";
 
-const client = new A2AClient("http://localhost:3000/a2a");
-
 async function run() {
+  const client = await A2AClient.getClientFromUrl("http://localhost:3000");
+
+  // print agent card
+  console.log("agent card:\n", client.agentCard);
+
   const userMessage = new MessageHandler()
     .withRole("user")
     .withId("1")
@@ -15,6 +18,7 @@ async function run() {
   let result: any = client.sendStreamMessage({
     message: userMessage.getMessage(),
   });
+
   let done = false;
 
   // continue until the multi turn conversation is completed

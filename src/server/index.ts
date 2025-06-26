@@ -21,20 +21,18 @@ import {
   taskNotFoundError,
 } from "../utils/errors.ts";
 import {
-  A2AError,
   CancelTaskRequest,
-  ErrorType,
   GetTaskPushNotificationConfigRequest,
   isJSONRPCError,
   JSONRPCRequest,
   JSONRPCResponse,
   SetTaskPushNotificationConfigRequest,
   Task,
-  TaskIdParams,
   TaskPushNotificationConfig,
   TaskResubscriptionRequest,
+  AgentCard,
 } from "../types/types.ts";
-import { TaskStreamConsumer, TaskStreamManager } from "./taskStreamConsumer.ts";
+import { TaskStreamManager } from "./taskStreamConsumer.ts";
 import {
   SendMessageRequest,
   SendStreamingMessageRequest,
@@ -52,7 +50,7 @@ interface Logger {
 
 interface A2AServerParams {
   agentExecutor: IAgentExecutor;
-  agentCard: Record<string, any>; // Placeholder for agent card, replace with actual type if available
+  agentCard: AgentCard;
   taskStoreFactory?: TaskStoreFactory;
   queueFactory?: StreamQueueFactory;
   telemetryProvider?: TelemetryProvider;
@@ -68,7 +66,7 @@ export class A2AServer {
   private readonly _telemetryProvider?: TelemetryProvider;
   private readonly _logger?: Logger;
   private _isRunning: boolean = false;
-  private readonly _agentCard: Record<string, any>; // Placeholder for agent card, replace with actual type if available
+  private readonly _agentCard: AgentCard;
 
   constructor({
     agentExecutor,
@@ -591,5 +589,9 @@ export class A2AServer {
       requestAbortSignal,
       extension
     );
+  }
+
+  public get agentCard(): AgentCard {
+    return this._agentCard;
   }
 }

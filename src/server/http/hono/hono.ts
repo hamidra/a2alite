@@ -57,8 +57,10 @@ export async function createHonoApp({ a2aServer }: { a2aServer: A2AServer }) {
     }
   });
 
-  // Leave the agent card handler as is for now
-  // app.get("/.well-known/agent.json", getAgentCardHandler);
+  // Agent card handler
+  app.get("/.well-known/agent.json", async (c) => {
+    return c.json(a2aServer.agentCard);
+  });
 
   return app;
 }
