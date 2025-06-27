@@ -2,9 +2,8 @@ import { createHonoApp } from "../../server/http/hono/hono.ts";
 import { serve } from "@hono/node-server";
 import { A2AServer } from "../../server/index.ts";
 import { IAgentExecutor } from "../../server/agent/executor.ts";
-import { populateMessage } from "../../server/agent/request.ts";
 import { taskNotCancelableError } from "../../utils/errors.ts";
-import { Part, Task } from "../../types/types.ts";
+import { Task } from "../../types/types.ts";
 import { AgentExecutionContext } from "../../server/agent/context.ts";
 import { MessageHandler } from "../../utils/message.ts";
 import { createTextPart } from "../../utils/part.ts";
@@ -38,7 +37,7 @@ class EchoAgentExecutor implements IAgentExecutor {
 
   async execute(context: AgentExecutionContext) {
     let currentTask = context.currentTask;
-    let message = populateMessage(context.request.params.message);
+    let incomingMessage = new MessageHandler(context.request.params.message);
 
     // if no task is set, it is a new message, store message in memory and ask for number of times to echo
     if (!currentTask) {
@@ -51,7 +50,7 @@ class EchoAgentExecutor implements IAgentExecutor {
           .getMessage(),
       });
       // store message in memory to be used for echo
-      EchoAgentExecutor.messageMemory.set(task.id, message.text);
+      EchoAgentExecutor.messageMemory.set(task.id, incomingMessage.getText());
       return task;
     }
 
@@ -59,7 +58,7 @@ class EchoAgentExecutor implements IAgentExecutor {
 
     // check if the current task is waiting for input
     if (currentTask.status.state === "input-required") {
-      const echoCount = parseInt(message.text);
+      const echoCount = parseInt(incomingMessage.getText());
       // if not a number, ask for a number
       if (isNaN(echoCount)) {
         const task = await context.inputRequired({
