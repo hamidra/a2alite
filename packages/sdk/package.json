@@ -1,0 +1,43 @@
+{
+  "name": "@a2alite/sdk",
+  "version": "0.0.1",
+  "description": "A Modular SDK (Server & Client) for Agent to Agent (A2A) protocol, with easy task lifecycle management",
+  "keywords": [
+    "A2A",
+    "AI",
+    "Agents",
+    "LLM",
+    "Agent to Agent"
+  ],
+  "license": "Apache-2.0",
+  "author": "Hamid Alipour",
+  "type": "module",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "exports": {
+    "./*": {
+      "import": "./dist/esm/*",
+      "require": "./dist/cjs/*"
+    }
+  },
+  "scripts": {
+    "build": "pnpm run clean && pnpm run build:esm && pnpm run build:cjs",
+    "build:esm": "tsc --project tsconfig.esm.json",
+    "build:cjs": "tsc --project tsconfig.cjs.json",
+    "clean": "rimraf dist",
+    "prepublishOnly": "pnpm run build",
+    "publish": "npm publish --access public"
+  },
+  "devDependencies": {
+    "rimraf": "^5.0.5",
+    "typescript": "^5.8.3"
+  },
+  "dependencies": {
+    "@hono/node-server": "^1.14.4",
+    "hono": "^4.7.11",
+    "uuid": "^11.1.0",
+    "zod": "^3.25.30"
+  }
+}

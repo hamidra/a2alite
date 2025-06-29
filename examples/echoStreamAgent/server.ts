@@ -1,14 +1,14 @@
-import { createHonoApp } from "../../server/http/hono/hono.ts";
+import { createHonoApp } from "@fasta2a/sdk/server/http/hono/hono.ts";
 import { serve } from "@hono/node-server";
-import { A2AServer } from "../../server/index.ts";
-import { IAgentExecutor } from "../../server/agent/executor.ts";
-import { taskNotCancelableError } from "../../utils/errors.ts";
-import { Task } from "../../types/types.ts";
-import { AgentExecutionContext } from "../../server/agent/context.ts";
-import { MessageHandler } from "../../utils/message.ts";
-import { createTextPart } from "../../utils/part.ts";
-import { ArtifactHandler } from "../../utils/artifact.ts";
-import { AgentCard } from "../../types/types.ts";
+import { A2AServer } from "@fasta2a/sdk/server/index.ts";
+import { IAgentExecutor } from "@fasta2a/sdk/server/agent/executor.ts";
+import { taskNotCancelableError } from "@fasta2a/sdk/utils/errors.ts";
+import { Task } from "@fasta2a/sdk/types/types.ts";
+import { AgentExecutionContext } from "@fasta2a/sdk/server/agent/context.ts";
+import { MessageHandler } from "@fasta2a/sdk/utils/message.ts";
+import { createTextPart } from "@fasta2a/sdk/utils/part.ts";
+import { ArtifactHandler } from "@fasta2a/sdk/utils/artifact.ts";
+import { AgentCard } from "@fasta2a/sdk/types/types.ts";
 
 const agentCard: AgentCard = {
   name: "Echo Agent",
@@ -64,7 +64,7 @@ class EchoAgentExecutor implements IAgentExecutor {
         const task = await context.inputRequired({
           message: new MessageHandler()
             .withRole("agent")
-            .addTextPart("Please enter a valid number.")
+            .addTextPart("Please send a valid number.")
             .getMessage(),
         });
         return task;

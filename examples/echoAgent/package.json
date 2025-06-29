@@ -1,0 +1,20 @@
+{
+  "name": "@fasta2a/example-echo-agent",
+  "version": "0.0.1",
+  "description": "Echo Agent example using Fast A2A SDK",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "a2a:server": "tsx server.ts",
+    "a2a:client": "tsx client.ts",
+    "build": "tsc"
+  },
+  "dependencies": {
+    "@fasta2a/sdk": "workspace:*",
+    "@hono/node-server": "^1.14.4"
+  },
+  "devDependencies": {
+    "tsx": "^4.0.0",
+    "typescript": "^5.8.3"
+  }
+}

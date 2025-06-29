@@ -1,0 +1,22 @@
+curl -X POST http://localhost:3000/a2a \
+  -H "Content-Type: application/json" \
+  -d @- <<EOF
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "message/send",
+  "params": {
+    "message": {
+      "role": "user",
+      "parts": [
+        {
+          "kind": "text",
+          "text": "tell me a joke"
+        }
+      ],
+      "messageId": "9229e770-767c-417b-a0b0-f0741243c589"
+    },
+    "metadata": {}
+  }
+}
+EOF

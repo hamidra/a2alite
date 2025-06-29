@@ -1,5 +1,5 @@
-import { MessageHandler } from "../../utils/message.ts";
-import { A2AClient } from "../../client/a2aClient.ts";
+import { MessageHandler } from "@fasta2a/sdk/utils/message.js";
+import { A2AClient } from "@fasta2a/sdk/client/a2aClient.js";
 
 async function run() {
   const client = await A2AClient.getClientFromUrl("http://localhost:3000");

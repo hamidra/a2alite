@@ -1,0 +1,12 @@
+import { JSONRPCError } from "../types/types.ts";
+export declare function jsonParseError(message?: string, data?: unknown): JSONRPCError;
+export declare function invalidRequestError(message?: string, data?: unknown): JSONRPCError;
+export declare function methodNotFoundError(message?: string, data?: unknown): JSONRPCError;
+export declare function invalidParamsError(message?: string, data?: unknown): JSONRPCError;
+export declare function internalError(message?: string, data?: unknown): JSONRPCError;
+export declare function taskNotFoundError(message?: string, data?: unknown): JSONRPCError;
+export declare function taskNotCancelableError(message?: string, data?: unknown): JSONRPCError;
+export declare function pushNotificationNotSupportedError(message?: string, data?: unknown): JSONRPCError;
+export declare function unsupportedOperationError(message?: string, data?: unknown): JSONRPCError;
+export declare function contentTypeNotSupportedError(message?: string, data?: unknown): JSONRPCError;
+export declare function invalidAgentResponseError(message?: string, data?: unknown): JSONRPCError;

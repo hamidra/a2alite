@@ -3,7 +3,7 @@ import {
   JSONRPCResponse,
   ErrorType,
   RequestsByMethod,
-} from "../types/types.ts";
+} from "../../types/types.ts";
 
 export type HandlerResponse = {
   response?: JSONRPCResponse;

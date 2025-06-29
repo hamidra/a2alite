@@ -1,7 +1,7 @@
 {
-  "name": "front-agent",
-  "version": "0.1.0",
-  "description": "An Modular Agent to Agent(A2A) Framework",
+  "name": "a2alite",
+  "version": "0.0.1",
+  "description": "A Modular, extensible SDK (Server & Client) for Agent to Agent (A2A) protocol",
   "keywords": [
     "A2A",
     "AI",
@@ -13,21 +13,20 @@
   "license": "Apache-2.0",
   "author": "Hamid Alipour",
   "type": "module",
-  "types": "dist/index.d.ts",
-  "exports": {
-    ".": "./dist/index.js"
-  },
+  "private": true,
   "scripts": {
-    "build": "tsc",
-    "test": "vitest"
+    "build": "pnpm -r build",
+    "test": "pnpm -r test",
+    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\"",
+    "clean": "pnpm -r clean",
+    "publish:sdk": "pnpm --filter a2alite publish",
+    "version:patch": "pnpm --filter a2alite version patch",
+    "version:minor": "pnpm --filter a2alite version minor",
+    "version:major": "pnpm --filter a2alite version major"
   },
   "devDependencies": {
+    "prettier": "^3.6.2",
+    "rimraf": "^5.0.5",
     "typescript": "^5.8.3"
-  },
-  "dependencies": {
-    "@hono/node-server": "^1.14.4",
-    "hono": "^4.7.11",
-    "uuid": "^11.1.0",
-    "zod": "^3.25.30"
   }
 }

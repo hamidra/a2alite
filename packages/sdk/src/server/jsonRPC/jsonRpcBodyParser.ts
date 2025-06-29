@@ -1,10 +1,10 @@
 import { IncomingMessage, ServerResponse } from "http";
-import { jsonParseError, invalidRequestError } from "../utils/errors.ts";
+import { jsonParseError, invalidRequestError } from "../../utils/errors.ts";
 import {
   JSONRPCError,
   JSONRPCRequest,
   JSONRPCRequestSchema,
-} from "../types/types.ts";
+} from "../../types/types.ts";
 
 /**
  * Helper to read and parse JSON body from Node.js IncomingMessage

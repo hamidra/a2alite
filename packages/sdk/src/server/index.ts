@@ -1,7 +1,7 @@
 import {
   JSONRPCServer,
   type HandlerResponse,
-} from "../shared/jsonRpcServer.ts";
+} from "./jsonRPC/jsonRpcServer.ts";
 import type { IStore } from "./providers/storage/index.ts";
 import type {
   TaskStoreFactory,

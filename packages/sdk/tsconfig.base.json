@@ -1,0 +1,20 @@
+{
+  "compilerOptions": {
+    "target": "ES2020" /* Set the JavaScript language version for emitted JavaScript and include compatible library declarations. */,
+
+    /* Modules */
+    "module": "NodeNext" /* Use ESModules for output. */,
+    "rootDir": "./src" /* Specify the root folder within your source files. */,
+    "moduleResolution": "nodenext",
+    "baseUrl": "./" /* Specify the base directory to resolve non-relative module names. */,
+    "rewriteRelativeImportExtensions": true /* Rewrite '.ts', '.tsx', '.mts', and '.cts' file extensions in relative import paths to their JavaScript equivalent in output files. */,
+
+    /* Type Checking */
+    "strict": true /* Enable all strict type-checking options. */,
+
+    /* Completeness */
+    "declaration": true /* Generate .d.ts type declaration files. */,
+    "skipLibCheck": true /* Skip type checking all .d.ts files. */
+  },
+  "exclude": ["**/*.test.ts", "src/__mocks__/**/*"]
+}
