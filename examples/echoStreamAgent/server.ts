@@ -1,14 +1,14 @@
-import { createHonoApp } from "@fasta2a/sdk/server/http/hono/hono.ts";
+import { createHonoApp } from "@a2alite/sdk/server/http/hono/hono.ts";
 import { serve } from "@hono/node-server";
-import { A2AServer } from "@fasta2a/sdk/server/index.ts";
-import { IAgentExecutor } from "@fasta2a/sdk/server/agent/executor.ts";
-import { taskNotCancelableError } from "@fasta2a/sdk/utils/errors.ts";
-import { Task } from "@fasta2a/sdk/types/types.ts";
-import { AgentExecutionContext } from "@fasta2a/sdk/server/agent/context.ts";
-import { MessageHandler } from "@fasta2a/sdk/utils/message.ts";
-import { createTextPart } from "@fasta2a/sdk/utils/part.ts";
-import { ArtifactHandler } from "@fasta2a/sdk/utils/artifact.ts";
-import { AgentCard } from "@fasta2a/sdk/types/types.ts";
+import { A2AServer } from "@a2alite/sdk/server/index.ts";
+import { IAgentExecutor } from "@a2alite/sdk/server/agent/executor.ts";
+import { taskNotCancelableError } from "@a2alite/sdk/utils/errors.ts";
+import { Task } from "@a2alite/sdk/types/types.ts";
+import { AgentExecutionContext } from "@a2alite/sdk/server/agent/context.ts";
+import { MessageHandler } from "@a2alite/sdk/utils/message.ts";
+import { createTextPart } from "@a2alite/sdk/utils/part.ts";
+import { ArtifactHandler } from "@a2alite/sdk/utils/artifact.ts";
+import { AgentCard } from "@a2alite/sdk/types/types.ts";
 
 const agentCard: AgentCard = {
   name: "Echo Agent",

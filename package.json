@@ -19,10 +19,9 @@
     "test": "pnpm -r test",
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\"",
     "clean": "pnpm -r clean",
-    "publish:sdk": "pnpm --filter a2alite publish",
-    "version:patch": "pnpm --filter a2alite version patch",
-    "version:minor": "pnpm --filter a2alite version minor",
-    "version:major": "pnpm --filter a2alite version major"
+    "publish:sdk": "pnpm --filter @a2alite/sdk publish",
+    "version:patch": "pnpm --filter @a2alite/sdk version patch",
+    "version:minor": "pnpm --filter @a2alite/sdk version minor"
   },
   "devDependencies": {
     "prettier": "^3.6.2",

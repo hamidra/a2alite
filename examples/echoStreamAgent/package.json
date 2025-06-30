@@ -1,5 +1,5 @@
 {
-  "name": "@fasta2a/example-echo-stream-agent",
+  "name": "@a2alite/example-echo-stream-agent",
   "version": "0.0.1",
   "description": "Echo Stream Agent example using Fast A2A SDK",
   "private": true,
@@ -10,7 +10,7 @@
     "build": "tsc"
   },
   "dependencies": {
-    "@fasta2a/sdk": "workspace:*",
+    "@a2alite/sdk": "workspace:*",
     "@hono/node-server": "^1.14.4"
   },
   "devDependencies": {

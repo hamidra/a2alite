@@ -20,7 +20,7 @@ importers:
 
   examples/echoAgent:
     dependencies:
-      '@fasta2a/sdk':
+      '@a2alite/sdk':
         specifier: workspace:*
         version: link:../../packages/sdk
       '@hono/node-server':
@@ -36,25 +36,12 @@ importers:
 
   examples/echoStreamAgent:
     dependencies:
-      '@fasta2a/sdk':
+      '@a2alite/sdk':
         specifier: workspace:*
         version: link:../../packages/sdk
       '@hono/node-server':
         specifier: ^1.14.4
         version: 1.14.4(hono@4.7.11)
-    devDependencies:
-      tsx:
-        specifier: ^4.0.0
-        version: 4.20.3
-      typescript:
-        specifier: ^5.8.3
-        version: 5.8.3
-
-  examples/langchainAgent:
-    dependencies:
-      '@fasta2a/sdk':
-        specifier: workspace:*
-        version: link:../../packages/sdk
     devDependencies:
       tsx:
         specifier: ^4.0.0
