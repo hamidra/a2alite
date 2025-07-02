@@ -3,7 +3,7 @@ import { IQueue } from "./queue.ts";
 /**
  * In-memory implementation of IQueue<T>
  */
-export class InMemoryQueue<T> implements IQueue<T> {
+class InMemoryQueue<T> implements IQueue<T> {
   private items: T[] = [];
   private _isClosed: boolean = false;
 
@@ -64,3 +64,5 @@ export class InMemoryQueue<T> implements IQueue<T> {
     this._isClosed = true;
   }
 }
+
+export { InMemoryQueue };

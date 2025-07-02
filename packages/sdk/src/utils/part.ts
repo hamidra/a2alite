@@ -9,7 +9,7 @@ import type {
 /**
  * Creates a text part with the given content and metadata
  */
-export function createTextPart(
+function createTextPart(
   text: string,
   metadata?: Record<string, any>
 ): TextPart {
@@ -23,7 +23,7 @@ export function createTextPart(
 /**
  * Creates a file part with the given file data and metadata
  */
-export function createFilePart(
+function createFilePart(
   file: FileWithBytes | FileWithUri,
   metadata?: Record<string, any>
 ): FilePart {
@@ -34,13 +34,13 @@ export function createFilePart(
   };
 }
 
-export function isFileWithBytes(
+function isFileWithBytes(
   file: FileWithBytes | FileWithUri
 ): file is FileWithBytes {
   return "bytes" in file;
 }
 
-export function isFileWithUri(
+function isFileWithUri(
   file: FileWithBytes | FileWithUri
 ): file is FileWithUri {
   return "uri" in file;
@@ -49,7 +49,7 @@ export function isFileWithUri(
 /**
  * Creates a data part with the given data and metadata
  */
-export function createDataPart(
+function createDataPart(
   data: Record<string, any>,
   metadata?: Record<string, any>
 ): DataPart {
@@ -59,3 +59,11 @@ export function createDataPart(
     ...(metadata && { metadata }),
   };
 }
+
+export {
+  createTextPart,
+  createFilePart,
+  isFileWithBytes,
+  isFileWithUri,
+  createDataPart,
+};

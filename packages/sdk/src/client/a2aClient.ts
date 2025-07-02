@@ -18,7 +18,7 @@ import {
   AgentCard,
 } from "../types/types.ts";
 
-export async function fetchAgentCard(
+async function fetchAgentCard(
   baseUrl: string,
   path: string = "/.well-known/agent.json"
 ): Promise<AgentCard> {
@@ -40,7 +40,7 @@ export async function fetchAgentCard(
   }
 }
 
-export class A2AClient {
+class A2AClient {
   private _url: string;
   private _agentCard: AgentCard;
   private static idCounter: number = 0;
@@ -265,3 +265,5 @@ export class A2AClient {
     return new A2AClient(agentCard);
   }
 }
+
+export { A2AClient, fetchAgentCard };

@@ -12,20 +12,20 @@ const END_OF_STREAM_EVENT = "end-of-stream";
 /**
  * Checks if a task state is final.
  */
-export const isFinalTaskState = (state: TaskState) =>
+const isFinalTaskState = (state: TaskState) =>
   ["completed", "failed", "canceled", "rejected"].includes(state);
 
 /**
  * Checks if a task state is pending (e.g. input-required, auth-required).
  */
-export const isPendingTaskState = (state: TaskState) =>
+const isPendingTaskState = (state: TaskState) =>
   ["input-required", "auth-required"].includes(state);
 
-export function isEndOfStream(event: AgentStreamEvent): boolean {
+function isEndOfStream(event: AgentStreamEvent): boolean {
   return !isJSONRPCError(event) && event.kind === END_OF_STREAM_EVENT;
 }
 
-export class AgentTaskStream {
+class AgentTaskStream {
   public closed = false;
   public cx: AgentExecutionContext;
   public streamQueue: AgentStreamQueue;
@@ -201,3 +201,5 @@ export class AgentTaskStream {
     this._terminateIfPendingOrFinalState();
   }
 }
+
+export { isFinalTaskState, isPendingTaskState, isEndOfStream, AgentTaskStream };

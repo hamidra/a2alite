@@ -1,7 +1,7 @@
 /**
  * Custom error for general JSON parsing failures
  */
-export class JSONParseError extends Error {
+class JSONParseError extends Error {
   constructor(message: string) {
     super(message);
     this.name = "JSONParseError";
@@ -11,3 +11,5 @@ export class JSONParseError extends Error {
     }
   }
 }
+
+export { JSONParseError };

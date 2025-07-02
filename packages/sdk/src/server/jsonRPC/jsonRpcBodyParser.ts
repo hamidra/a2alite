@@ -9,7 +9,7 @@ import {
 /**
  * Helper to read and parse JSON body from Node.js IncomingMessage
  */
-export async function jsonRpcBodyParser(
+async function jsonRpcBodyParser(
   body: string
 ): Promise<JSONRPCRequest | JSONRPCError> {
   if (!body) {
@@ -30,3 +30,5 @@ export async function jsonRpcBodyParser(
     return jsonParseError("Invalid json in the body");
   }
 }
+
+export { jsonRpcBodyParser };

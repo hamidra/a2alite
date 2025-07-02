@@ -6,9 +6,11 @@ import {
 import { AgentExecutionContext } from "./context.ts";
 import type { AgentExecutionResult } from "./types.ts";
 
-export interface IAgentExecutor {
+interface IAgentExecutor {
   execute(context: AgentExecutionContext): Promise<AgentExecutionResult>;
   cancel(
     task: Task
   ): Promise<Task | TaskNotFoundError | TaskNotCancelableError>;
 }
+
+export type { IAgentExecutor };

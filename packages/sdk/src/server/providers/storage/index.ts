@@ -1,7 +1,7 @@
 /**
  * Store - A generic key-value store interface for task context and state management
  */
-export interface IStore<T = any> {
+interface IStore<T = any> {
   /**
    * Store a value by key
    * @param key - The key to store the value under
@@ -50,3 +50,5 @@ export interface IStore<T = any> {
    */
   entries?(): Promise<[string, T][]>;
 }
+
+export type { IStore };

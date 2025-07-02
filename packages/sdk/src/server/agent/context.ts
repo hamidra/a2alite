@@ -22,7 +22,7 @@ import { AgentTaskStream } from "./stream.ts";
  * @param request - The agent request to check
  * @returns true if the request is configured as blocking, false otherwise
  */
-export function requestIsBlocking(request: AgentRequest): boolean {
+function requestIsBlocking(request: AgentRequest): boolean {
   return request.params.configuration?.blocking ?? false;
 }
 
@@ -30,7 +30,7 @@ export function requestIsBlocking(request: AgentRequest): boolean {
  * Manages the execution context for an agent task, handling task lifecycle,
  * message creation, and streaming functionality.
  */
-export class AgentExecutionContext {
+class AgentExecutionContext {
   /** Unique contextId for this execution context */
   id: string;
   /** The original recieved request that initiated this context */
@@ -253,3 +253,5 @@ export class AgentExecutionContext {
     return message;
   }
 }
+
+export { requestIsBlocking, AgentExecutionContext };

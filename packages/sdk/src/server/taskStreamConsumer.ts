@@ -19,7 +19,7 @@ type Tapper<T> = {
   resolve: ((value: T | undefined) => void) | undefined;
 };
 
-export class TaskStreamConsumer {
+class TaskStreamConsumer {
   private tappers: Set<Tapper<AgentStreamEvent>> = new Set();
   private consuming: boolean = false;
   // true when the stream is finished
@@ -125,7 +125,7 @@ export class TaskStreamConsumer {
   }
 }
 
-export class TaskStreamManager {
+class TaskStreamManager {
   // Map of task ID to consumer
   private consumers: Map<string, TaskStreamConsumer> = new Map();
 
@@ -179,3 +179,5 @@ export class TaskStreamManager {
     this.consumers.delete(taskId);
   }
 }
+
+export { TaskStreamConsumer, TaskStreamManager };

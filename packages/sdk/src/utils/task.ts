@@ -10,7 +10,7 @@ import {
   TaskSchema,
 } from "../types/types.js";
 
-export class TaskHandler {
+class TaskHandler {
   private task: Partial<Task>;
 
   constructor(baseTask?: Partial<Omit<Task, "kind">>) {
@@ -126,3 +126,5 @@ export class TaskHandler {
     return TaskSchema.parse(this.task);
   }
 }
+
+export { TaskHandler };

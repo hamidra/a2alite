@@ -6,7 +6,7 @@ import { isJSONRPCError } from "../../../types/types.ts";
 import { internalError } from "../../../utils/errors.ts";
 import { streamSSE } from "hono/streaming";
 
-export async function createHonoApp({ a2aServer }: { a2aServer: A2AServer }) {
+async function createHonoApp({ a2aServer }: { a2aServer: A2AServer }) {
   const app = new Hono();
 
   // Start the a2a server
@@ -64,3 +64,5 @@ export async function createHonoApp({ a2aServer }: { a2aServer: A2AServer }) {
 
   return app;
 }
+
+export { createHonoApp };

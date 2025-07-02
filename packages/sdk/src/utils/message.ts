@@ -11,7 +11,7 @@ import {
   DataPart,
 } from "../types/types.ts";
 
-export class MessageHandler {
+class MessageHandler {
   private message: Message;
 
   constructor(baseMessage?: Partial<Message>) {
@@ -158,3 +158,5 @@ export class MessageHandler {
     return this.getDataParts().map((part) => part.data);
   }
 }
+
+export { MessageHandler };

@@ -3,7 +3,7 @@ import { IStore } from "./index.ts";
 /**
  * In-memory implementation of IStore<T>
  */
-export class InMemoryStore<T = any> implements IStore<T> {
+class InMemoryStore<T = any> implements IStore<T> {
   private store = new Map<string, { value: T; expiresAt?: number }>();
 
   async set(key: string, value: T, ttl?: number): Promise<void> {
@@ -69,3 +69,5 @@ export class InMemoryStore<T = any> implements IStore<T> {
     }
   }
 }
+
+export { InMemoryStore };

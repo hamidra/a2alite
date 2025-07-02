@@ -5,7 +5,7 @@ import {
   RequestsByMethod,
 } from "../../types/types.ts";
 
-export type HandlerResponse = {
+type HandlerResponse = {
   response?: JSONRPCResponse;
   stream?: AsyncGenerator<JSONRPCResponse>;
 };
@@ -13,7 +13,7 @@ export type HandlerResponse = {
 /**
  * Interface for the JSON-RPC Server, outlining its core functionalities.
  */
-export interface IJSONRPCServer {
+interface IJSONRPCServer {
   /**
    * Registers a handler for a specific JSON-RPC method.
    * @param requestSchema The Zod schema defining the specific request, including a literal method name.
@@ -42,7 +42,7 @@ export interface IJSONRPCServer {
   ): Promise<HandlerResponse>;
 }
 
-export class JSONRPCServer implements IJSONRPCServer {
+class JSONRPCServer implements IJSONRPCServer {
   private _handlers: Map<
     string,
     (
@@ -104,3 +104,6 @@ export class JSONRPCServer implements IJSONRPCServer {
     }
   }
 }
+
+export type { HandlerResponse, IJSONRPCServer };
+export { JSONRPCServer };

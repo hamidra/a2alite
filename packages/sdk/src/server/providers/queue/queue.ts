@@ -1,7 +1,7 @@
 /**
  * Queue - A generic queue interface for task management
  */
-export interface IQueue<T> {
+interface IQueue<T> {
   /**
    * Add an item to the queue
    * @param item - The item to enqueue
@@ -35,3 +35,5 @@ export interface IQueue<T> {
    */
   close?(): Promise<void>;
 }
+
+export type { IQueue };

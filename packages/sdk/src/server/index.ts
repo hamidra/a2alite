@@ -57,7 +57,7 @@ interface A2AServerParams {
   logger?: Logger;
 }
 
-export class A2AServer {
+class A2AServer {
   private readonly _jsonRpcServer = new JSONRPCServer();
   private readonly _taskStreamManager = new TaskStreamManager();
   private readonly _taskStore: IStore<Task>;
@@ -595,3 +595,5 @@ export class A2AServer {
     return this._agentCard;
   }
 }
+
+export { A2AServer };

@@ -10,7 +10,7 @@ import type {
 
 import { v4 as uuidv4 } from "uuid";
 
-export class ArtifactHandler {
+class ArtifactHandler {
   private artifact: Artifact;
 
   constructor(base?: Partial<Artifact> | Artifact) {
@@ -129,3 +129,5 @@ export class ArtifactHandler {
     });
   }
 }
+
+export { ArtifactHandler };
