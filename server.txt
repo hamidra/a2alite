@@ -1,0 +1,1898 @@
+Project Path: server
+
+Source Tree:
+
+```
+server
+├── providers
+│   ├── storage
+│   │   ├── in_memory.ts
+│   │   └── index.ts
+│   └── queue
+│       ├── in_memory.ts
+│       ├── queue.d.ts
+│       └── queue.ts
+├── jsonRPC
+│   ├── jsonRpcBodyParser.ts
+│   └── jsonRpcServer.ts
+├── agent
+│   ├── executor.ts
+│   ├── context.ts
+│   ├── stream.ts
+│   └── types.ts
+├── http
+│   └── hono
+│       └── hono.ts
+├── taskStreamConsumer.ts
+└── index.ts
+
+```
+
+`/Users/hra/Workspace/Code/tesser/front-agent/packages/sdk/src/server/providers/storage/in_memory.ts`:
+
+```ts
+import { IStore } from "./index.ts";
+
+/**
+ * In-memory implementation of IStore<T>
+ */
+export class InMemoryStore<T = any> implements IStore<T> {
+  private store = new Map<string, { value: T; expiresAt?: number }>();
+
+  async set(key: string, value: T, ttl?: number): Promise<void> {
+    let expiresAt: number | undefined = undefined;
+    if (ttl && ttl > 0) {
+      expiresAt = Date.now() + ttl * 1000;
+    }
+    this.store.set(key, { value, expiresAt });
+  }
+
+  async get(key: string): Promise<T | undefined> {
+    const entry = this.store.get(key);
+    if (!entry) return undefined;
+    if (entry.expiresAt && entry.expiresAt < Date.now()) {
+      this.store.delete(key);
+      return undefined;
+    }
+    return entry.value;
+  }
+
+  async delete(key: string): Promise<boolean> {
+    return this.store.delete(key);
+  }
+
+  async has(key: string): Promise<boolean> {
+    const entry = this.store.get(key);
+    if (!entry) return false;
+    if (entry.expiresAt && entry.expiresAt < Date.now()) {
+      this.store.delete(key);
+      return false;
+    }
+    return true;
+  }
+
+  async clear(): Promise<void> {
+    this.store.clear();
+  }
+
+  async keys(): Promise<string[]> {
+    this.cleanupExpired();
+    return Array.from(this.store.keys());
+  }
+
+  async values(): Promise<T[]> {
+    this.cleanupExpired();
+    return Array.from(this.store.values()).map((e) => e.value);
+  }
+
+  async entries(): Promise<[string, T][]> {
+    this.cleanupExpired();
+    return Array.from(this.store.entries()).map(([k, v]) => [k, v.value]);
+  }
+
+  /**
+   * Remove expired entries
+   */
+  private cleanupExpired() {
+    const now = Date.now();
+    for (const [key, entry] of this.store.entries()) {
+      if (entry.expiresAt && entry.expiresAt < now) {
+        this.store.delete(key);
+      }
+    }
+  }
+}
+
+```
+
+`/Users/hra/Workspace/Code/tesser/front-agent/packages/sdk/src/server/providers/storage/index.ts`:
+
+```ts
+/**
+ * Store - A generic key-value store interface for task context and state management
+ */
+export interface IStore<T = any> {
+  /**
+   * Store a value by key
+   * @param key - The key to store the value under
+   * @param value - The value to store
+   * @param ttl - Optional time-to-live in seconds
+   */
+  set(key: string, value: T, ttl?: number): Promise<void>;
+
+  /**
+   * Get a value by key
+   * @param key - The key to retrieve
+   * @returns The stored value or undefined if not found
+   */
+  get(key: string): Promise<T | undefined>;
+
+  /**
+   * Delete a value by key
+   * @param key - The key to delete
+   * @returns true if the key was deleted, false if it didn't exist
+   */
+  delete(key: string): Promise<boolean>;
+
+  /**
+   * Check if a key exists
+   * @param key - The key to check
+   */
+  has?(key: string): Promise<boolean>;
+
+  /**
+   * Clear all values from the store
+   */
+  clear?(): Promise<void>;
+
+  /**
+   * Get all keys in the store
+   */
+  keys?(): Promise<string[]>;
+
+  /**
+   * Get all values in the store
+   */
+  values?(): Promise<T[]>;
+
+  /**
+   * Get all entries (key-value pairs) in the store
+   */
+  entries?(): Promise<[string, T][]>;
+}
+
+```
+
+`/Users/hra/Workspace/Code/tesser/front-agent/packages/sdk/src/server/providers/queue/in_memory.ts`:
+
+```ts
+import { IQueue } from "./queue.ts";
+
+/**
+ * In-memory implementation of IQueue<T>
+ */
+export class InMemoryQueue<T> implements IQueue<T> {
+  private items: T[] = [];
+  private _isClosed: boolean = false;
+
+  // Pending promises for dequeue operations
+  private pendingDequeuePromises: Array<(value: T | undefined) => void> = [];
+
+  async dequeue(): Promise<T | undefined> {
+    if (this._isClosed) {
+      return;
+    }
+    if (this.items.length === 0) {
+      // block and add the promise to the pending list to be resolved when an item is enqueued
+      return new Promise<T | undefined>((resolve) => {
+        this.pendingDequeuePromises.push(resolve);
+      });
+    }
+    // return the first item
+    return this.items.shift()!;
+  }
+
+  async enqueue(item: T): Promise<void> {
+    this.items.push(item);
+
+    // resolve any pending promises
+    this.resolvePendingPromises();
+  }
+
+  private resolvePendingPromises() {
+    // iterate and resolve any pending promises as long as there are items in the queue
+    while (this.pendingDequeuePromises.length > 0 && this.items.length > 0) {
+      const resolvePending = this.pendingDequeuePromises.shift()!;
+      resolvePending(this.items.shift()!);
+    }
+  }
+
+  async size(): Promise<number> {
+    return this.items.length;
+  }
+
+  async isEmpty(): Promise<boolean> {
+    return this.items.length === 0;
+  }
+
+  async peek(): Promise<T | undefined> {
+    if (this.items.length === 0) return undefined;
+    return this.items[0];
+  }
+
+  // clear the queue and resolve any pending promises with undefined to close the queue
+  async close(): Promise<void> {
+    this.items = [];
+    // iterate and resolve any pending promises as long as there are items in the queue
+    while (this.pendingDequeuePromises.length > 0) {
+      const resolvePending = this.pendingDequeuePromises.shift()!;
+      resolvePending(undefined);
+    }
+    this.pendingDequeuePromises = [];
+    this._isClosed = true;
+  }
+}
+
+```
+
+`/Users/hra/Workspace/Code/tesser/front-agent/packages/sdk/src/server/providers/queue/queue.d.ts`:
+
+```ts
+/**
+ * Queue - A generic queue interface for task management
+ */
+export interface IQueue<T> {
+    /**
+     * Add an item to the queue
+     * @param item - The item to enqueue
+     */
+    enqueue(item: T): Promise<void>;
+    /**
+     * Remove and return an item from the queue or block until an item is available
+     * @returns The dequeued item or undefined if queue is empty
+     */
+    dequeue(): Promise<T | undefined>;
+    /**
+     * Get the number of items in the queue
+     */
+    size?(): Promise<number>;
+    /**
+     * Check if the queue is empty
+     */
+    isEmpty?(): Promise<boolean>;
+    /**
+     * Peek at the next item without removing it
+     * @returns The next item or undefined if queue is empty
+     */
+    peek?(): Promise<T | undefined>;
+    /**
+     * Free all resources and close the queue
+     */
+    close?(): Promise<void>;
+}
+
+```
+
+`/Users/hra/Workspace/Code/tesser/front-agent/packages/sdk/src/server/providers/queue/queue.ts`:
+
+```ts
+/**
+ * Queue - A generic queue interface for task management
+ */
+export interface IQueue<T> {
+  /**
+   * Add an item to the queue
+   * @param item - The item to enqueue
+   */
+  enqueue(item: T): Promise<void>;
+
+  /**
+   * Remove and return an item from the queue or block until an item is available
+   * @returns The dequeued item or undefined if queue is empty
+   */
+  dequeue(): Promise<T | undefined>;
+
+  /**
+   * Get the number of items in the queue
+   */
+  size?(): Promise<number>;
+
+  /**
+   * Check if the queue is empty
+   */
+  isEmpty?(): Promise<boolean>;
+
+  /**
+   * Peek at the next item without removing it
+   * @returns The next item or undefined if queue is empty
+   */
+  peek?(): Promise<T | undefined>;
+
+  /**
+   * Free all resources and close the queue
+   */
+  close?(): Promise<void>;
+}
+
+```
+
+`/Users/hra/Workspace/Code/tesser/front-agent/packages/sdk/src/server/jsonRPC/jsonRpcBodyParser.ts`:
+
+```ts
+import { IncomingMessage, ServerResponse } from "http";
+import { jsonParseError, invalidRequestError } from "../../utils/errors.ts";
+import {
+  JSONRPCError,
+  JSONRPCRequest,
+  JSONRPCRequestSchema,
+} from "../../types/types.ts";
+
+/**
+ * Helper to read and parse JSON body from Node.js IncomingMessage
+ */
+export async function jsonRpcBodyParser(
+  body: string
+): Promise<JSONRPCRequest | JSONRPCError> {
+  if (!body) {
+    return jsonParseError("Empty request body");
+  }
+  try {
+    let json = JSON.parse(body);
+    // parse the JSON body into a JSONRPCRequest
+    let jsonRpcRequest = JSONRPCRequestSchema.safeParse(json);
+    if (jsonRpcRequest.success) {
+      // If validation succeeds, return the parsed JSON-RPC request
+      return jsonRpcRequest.data;
+    } else {
+      // If validation fails, return a JSONParseError with the validation issues
+      return invalidRequestError("Invalid JSON-RPC request");
+    }
+  } catch (err) {
+    return jsonParseError("Invalid json in the body");
+  }
+}
+
+```
+
+`/Users/hra/Workspace/Code/tesser/front-agent/packages/sdk/src/server/jsonRPC/jsonRpcServer.ts`:
+
+```ts
+import {
+  JSONRPCRequest,
+  JSONRPCResponse,
+  ErrorType,
+  RequestsByMethod,
+} from "../../types/types.ts";
+
+export type HandlerResponse = {
+  response?: JSONRPCResponse;
+  stream?: AsyncGenerator<JSONRPCResponse>;
+};
+
+/**
+ * Interface for the JSON-RPC Server, outlining its core functionalities.
+ */
+export interface IJSONRPCServer {
+  /**
+   * Registers a handler for a specific JSON-RPC method.
+   * @param requestSchema The Zod schema defining the specific request, including a literal method name.
+   * @param handler The function to execute when a request matching the schema is received.
+   */
+  setRequestHandler<M extends keyof RequestsByMethod>(
+    methodName: M,
+    handler: (
+      request: RequestsByMethod[M],
+      requestAbortSignal?: AbortSignal,
+      extension?: Record<string, any>
+    ) => Promise<HandlerResponse>
+  ): void;
+
+  /**
+   * Handles an incoming raw JSON-RPC request string.
+   * This is the primary entry point for the server to receive requests.
+   * @param rawRequest The raw JSON string of the request.
+   * @param requestAbortSignal An optional AbortSignal to cancel the specific request.
+   * @returns A promise that resolves to the JSON string of the response, or undefined for notifications.
+   */
+  handleRequest(
+    request: JSONRPCRequest,
+    requestAbortSignal?: AbortSignal,
+    extension?: Record<string, any>
+  ): Promise<HandlerResponse>;
+}
+
+export class JSONRPCServer implements IJSONRPCServer {
+  private _handlers: Map<
+    string,
+    (
+      request: JSONRPCRequest,
+      requestAbortSignal?: AbortSignal,
+      extension?: Record<string, any>
+    ) => Promise<HandlerResponse>
+  > = new Map();
+
+  private serverAbortSignal?: AbortSignal;
+
+  public setRequestHandler<M extends keyof RequestsByMethod>(
+    methodName: M,
+    handler: (
+      request: RequestsByMethod[M],
+      requestAbortSignal?: AbortSignal,
+      extension?: Record<string, any>
+    ) => Promise<HandlerResponse>
+  ): void {
+    // as any is fine since the handler is called with the correct type
+    this._handlers.set(methodName, handler as any);
+  }
+
+  public async handleRequest(
+    request: JSONRPCRequest,
+    requestAbortSignal?: AbortSignal,
+    extension?: Record<string, any>
+  ): Promise<HandlerResponse> {
+    try {
+      const handler = this._handlers.get(request.method);
+
+      // If no handler is found for the requested method, return a MethodNotFoundError
+      if (!handler) {
+        return {
+          response: {
+            jsonrpc: "2.0",
+            id: request.id,
+            error: {
+              code: ErrorType.MethodNotFoundError,
+              message: "Method not found",
+            },
+          },
+        };
+      }
+
+      // Run the handler and return the result
+      return handler(request, requestAbortSignal, extension);
+    } catch (error) {
+      return {
+        response: {
+          jsonrpc: "2.0",
+          id: request.id,
+          error: {
+            code: ErrorType.InternalError,
+            message: "Internal error",
+          },
+        },
+      };
+    }
+  }
+}
+
+```
+
+`/Users/hra/Workspace/Code/tesser/front-agent/packages/sdk/src/server/agent/executor.ts`:
+
+```ts
+import {
+  Task,
+  TaskNotFoundError,
+  TaskNotCancelableError,
+} from "../../types/types.ts";
+import { AgentExecutionContext } from "./context.ts";
+import type { AgentExecutionResult } from "./types.ts";
+
+export interface IAgentExecutor {
+  execute(context: AgentExecutionContext): Promise<AgentExecutionResult>;
+  cancel(
+    task: Task
+  ): Promise<Task | TaskNotFoundError | TaskNotCancelableError>;
+}
+
+```
+
+`/Users/hra/Workspace/Code/tesser/front-agent/packages/sdk/src/server/agent/context.ts`:
+
+```ts
+import type {
+  Task,
+  Message,
+  TaskState,
+  TaskStatus,
+  Artifact,
+} from "../../types/types.ts";
+
+import { v4 as uuidv4 } from "uuid";
+
+import type {
+  AgentMessageParams,
+  AgentRequest,
+  AgentTaskParams,
+  StreamQueueFactory,
+  StreamResult,
+} from "./types.ts";
+import { AgentTaskStream } from "./stream.ts";
+
+/**
+ * Determines if a request should block until completion
+ * @param request - The agent request to check
+ * @returns true if the request is configured as blocking, false otherwise
+ */
+export function requestIsBlocking(request: AgentRequest): boolean {
+  return request.params.configuration?.blocking ?? false;
+}
+
+/**
+ * Manages the execution context for an agent task, handling task lifecycle,
+ * message creation, and streaming functionality.
+ */
+export class AgentExecutionContext {
+  /** Unique contextId for this execution context */
+  id: string;
+  /** The original recieved request that initiated this context */
+  public request: AgentRequest;
+  /** Factory method for creating stream queues */
+  public streamQueueFactory: StreamQueueFactory;
+  /** The current active task being processed */
+  public currentTask?: Task;
+  /** Reference tasks related to this context */
+  public referenceTasks?: Task[];
+
+  /**
+   * Ensures a current task exists, throwing an error if not
+   * @throws Error when no current task is set
+   */
+  private _ensureTask() {
+    if (!this.currentTask) {
+      throw new Error(
+        "taskId not set. Call accept or start first to initiate a task."
+      );
+    }
+  }
+
+  /**
+   * Creates a new AgentExecutionContext
+   * @param request - The received request
+   * @param streamQueueFactory - Factory for creating stream queues
+   * @param task - Optional existing task if the context is running an existing task received from the client
+   * @param referenceTasks - Optional reference tasks received from the client
+   * @param id - Optional custom context ID, used as a fallback if there is no task or request to extract a contextId from, if not provided a auto generated uuid is used as a fallback.
+   */
+  constructor(
+    request: AgentRequest,
+    streamQueueFactory: StreamQueueFactory,
+    task?: Task,
+    referenceTasks?: Task[],
+    id?: string
+  ) {
+    this.streamQueueFactory = streamQueueFactory;
+    this.request = request;
+    this.currentTask = task;
+    this.referenceTasks = referenceTasks;
+    this.id =
+      task?.contextId ||
+      this.request.params.message.contextId ||
+      id ||
+      uuidv4();
+  }
+
+  /**
+   * Creates a message in this context, automatically setting contextId
+   * @param messageParams - Message content and metadata
+   * @param taskId - Optional task ID
+   * @param messageId - Optional custom message ID (auto-generated if not provided)
+   * @returns Message with context and task metadata
+   */
+  private _createMessage(
+    messageParams: AgentMessageParams,
+    taskId?: string,
+    messageId?: string
+  ): Message {
+    return {
+      kind: "message",
+      messageId: messageId || uuidv4(),
+      parts: messageParams.parts,
+      metadata: messageParams.metadata,
+      role: "agent",
+      contextId: this.id,
+      ...(taskId ? { taskId } : {}),
+    };
+  }
+
+  /**
+   * Creates a new task or updates the current task with new parameters
+   * @param taskParams - Task parameters including artifacts and metadata
+   * @param taskState - New state for the task
+   * @param taskId - Optional task ID for new tasks
+   * @returns The created or updated task
+   */
+  private _createStatus(state: TaskState, message?: Message): TaskStatus {
+    return {
+      state,
+      timestamp: new Date().toISOString(),
+      ...(message && { message }),
+    };
+  }
+
+  private _mergeArtifacts(
+    existing: Artifact[] = [],
+    newArtifacts: Artifact[] = []
+  ): Artifact[] {
+    return [...(existing || []), ...(newArtifacts || [])];
+  }
+
+  private _createOrUpdateTask(
+    taskParams: AgentTaskParams | undefined | null,
+    taskState: TaskState,
+    taskId?: string
+  ): Task {
+    let currentTask = this.currentTask;
+    let id = currentTask?.id || taskId || uuidv4();
+    let artifacts = this._mergeArtifacts(
+      currentTask?.artifacts || [],
+      taskParams?.artifacts || []
+    );
+    let metadata = taskParams?.metadata || currentTask?.metadata || {};
+    const statusMessage = taskParams?.message
+      ? this._createMessage(taskParams?.message, id)
+      : undefined;
+    let status = {
+      ...currentTask?.status,
+      ...this._createStatus(taskState, statusMessage),
+    };
+    // use the provided task message as the task status message
+
+    return {
+      kind: "task",
+      id,
+      contextId: this.id,
+      artifacts,
+      status,
+      metadata,
+    };
+  }
+
+  /**
+   * Sets or updates the current task and returns it
+   * @param taskParams - Task parameters
+   * @param taskState - Task state
+   * @param taskId - Optional task ID
+   * @returns The updated task
+   */
+  public setOrUpdateTask(
+    taskParams: AgentTaskParams | null | undefined,
+    taskState: TaskState,
+    taskId?: string
+  ): Task {
+    let task = this._createOrUpdateTask(taskParams, taskState, taskId);
+    this.currentTask = task;
+    return task;
+  }
+
+  /**
+   * Initiates a streaming response with callback execution
+   * @param cb - Callback function to handle the task stream
+   * @param taskId - Optional task ID
+   * @param initialTaskState - Initial state for the task (default: "submitted")
+   * @returns Promise resolving to stream result
+   */
+  public async stream(
+    cb: (taskStream: AgentTaskStream) => Promise<void> | void,
+    taskId?: string,
+    initialTaskState: "submitted" | "working" = "submitted"
+  ): Promise<StreamResult> {
+    // ToDo: check request.
+    // set the task to submitted
+    let currentTask = this.setOrUpdateTask(null, initialTaskState, taskId);
+    let taskStream = new AgentTaskStream(this);
+    // call the callback with the task stream to kickoff the stream async (do not await)
+    cb(taskStream);
+    return { kind: "stream", taskStream, currentTask };
+  }
+
+  /**
+   * Rejects the current task with provided parameters
+   * @param taskParams - Task parameters including rejection reason
+   * @param taskId - Optional task ID
+   * @returns The rejected task
+   */
+  public async reject(taskParams: AgentTaskParams, taskId?: string) {
+    let taskState: TaskState = "rejected";
+    let task = this.setOrUpdateTask(taskParams, taskState, taskId);
+    return task;
+  }
+
+  /**
+   * Sets task state to require authentication
+   * @param taskParams - Task parameters
+   * @param taskId - Optional task ID
+   * @returns The task requiring authentication
+   */
+  public async authRequired(taskParams: AgentTaskParams, taskId?: string) {
+    let taskState: TaskState = "auth-required";
+    let task = this.setOrUpdateTask(taskParams, taskState, taskId);
+    return task;
+  }
+
+  /**
+   * Sets task state to require additional input
+   * @param taskParams - Task parameters
+   * @param taskId - Optional task ID
+   * @returns The task requiring input
+   */
+  public async inputRequired(taskParams: AgentTaskParams, taskId?: string) {
+    let taskState: TaskState = "input-required";
+    let task = this.setOrUpdateTask(taskParams, taskState, taskId);
+    return task;
+  }
+
+  /**
+   * Marks the task as completed
+   * @param taskParams - Task parameters including completion details
+   * @param taskId - Optional task ID
+   * @returns The completed task
+   */
+  public async complete(taskParams: AgentTaskParams, taskId?: string) {
+    let taskState: TaskState = "completed";
+    let task = this.setOrUpdateTask(taskParams, taskState, taskId);
+    return task;
+  }
+
+  /**
+   * Creates a standalone message (not associated with a task)
+   * @param messageParams - Message content and metadata
+   * @param messageId - Optional custom message ID
+   * @returns The created message
+   */
+  public async message(messageParams: AgentMessageParams, messageId?: string) {
+    let message = this._createMessage(messageParams, messageId);
+    return message;
+  }
+}
+
+```
+
+`/Users/hra/Workspace/Code/tesser/front-agent/packages/sdk/src/server/agent/stream.ts`:
+
+```ts
+import type {
+  AgentArtifactParams,
+  AgentStreamQueue,
+  AgentTaskParams,
+} from "./types.ts";
+import { AgentExecutionContext } from "./context.ts";
+import type { AgentStreamEvent } from "./types.ts";
+import { isJSONRPCError, Task, TaskState } from "../../types/types.ts";
+
+const END_OF_STREAM_EVENT = "end-of-stream";
+
+/**
+ * Checks if a task state is final.
+ */
+export const isFinalTaskState = (state: TaskState) =>
+  ["completed", "failed", "canceled", "rejected"].includes(state);
+
+/**
+ * Checks if a task state is pending (e.g. input-required, auth-required).
+ */
+export const isPendingTaskState = (state: TaskState) =>
+  ["input-required", "auth-required"].includes(state);
+
+export function isEndOfStream(event: AgentStreamEvent): boolean {
+  return !isJSONRPCError(event) && event.kind === END_OF_STREAM_EVENT;
+}
+
+export class AgentTaskStream {
+  public closed = false;
+  public cx: AgentExecutionContext;
+  public streamQueue: AgentStreamQueue;
+
+  constructor(cx: AgentExecutionContext) {
+    if (!cx.currentTask) {
+      throw new Error(
+        "Cannot create AgentTaskStream: context has no current task."
+      );
+    }
+    this.cx = cx;
+    this.streamQueue = cx.streamQueueFactory();
+  }
+
+  private _terminateIfPendingOrFinalState() {
+    let task = this.cx.currentTask;
+    if (
+      task &&
+      (isPendingTaskState(task.status.state) ||
+        isFinalTaskState(task.status.state))
+    ) {
+      // close the stream
+      this.closed = true;
+      // send end of stream event
+      this.streamQueue.enqueue({
+        kind: END_OF_STREAM_EVENT,
+        taskId: task.id,
+        contextId: task.contextId,
+      });
+    }
+  }
+
+  private _ensureOpen() {
+    if (this.closed) {
+      throw new Error("Task stream already terminated.");
+    }
+  }
+
+  async _sendTaskStatusUpdate(): Promise<void> {
+    let task = this.cx.currentTask;
+    if (task) {
+      let final = isFinalTaskState(task.status.state);
+      await this.streamQueue.enqueue({
+        kind: "status-update",
+        taskId: task.id,
+        final,
+        contextId: task.contextId,
+        status: task.status,
+      });
+    }
+    // TODO: log warning if no task is set
+  }
+
+  // ToDo: change stream to always guarantee there is a task to not throw an error
+  public getTask(): Task {
+    if (!this.cx.currentTask) {
+      throw new Error("No task found");
+    }
+    return this.cx.currentTask;
+  }
+
+  public async writeArtifact(
+    { artifact, append = false, lastChunk = false }: AgentArtifactParams,
+    sendTaskStatusUpdate = true
+  ) {
+    this._ensureOpen();
+    // Add artifact to the current task and set state to 'working'
+    // When streaming, artifacts being streamed through artifact updates and are not kept in the current task. only the state is set.
+    // update the task with new artifacts
+    let task = this.cx.currentTask;
+    if (!task) {
+      throw new Error("No task find to stream artifacts to");
+    }
+    // set the task state to 'working' if not already
+    if (task.status.state !== "working") {
+      this.cx.setOrUpdateTask({}, "working");
+      if (sendTaskStatusUpdate) {
+        await this._sendTaskStatusUpdate();
+      }
+    }
+    // Send artifact update event
+    await this.streamQueue.enqueue({
+      kind: "artifact-update",
+      taskId: task.id,
+      contextId: this.cx.id,
+      artifact,
+      append,
+      lastChunk,
+      metadata: artifact.metadata,
+    });
+
+    // check and terminate if the task is in a final or pending state
+    this._terminateIfPendingOrFinalState();
+  }
+
+  // ToDo: use this method to set the task state
+  private async _setTaskState(state: TaskState) {
+    this._ensureOpen();
+    let task = this.cx.currentTask;
+    if (!task) {
+      throw new Error("No task find to stream artifacts to");
+    }
+    // if the task state has changed, update it and send the status update
+    if (task.status.state !== state) {
+      this.cx.setOrUpdateTask({}, state);
+      await this._sendTaskStatusUpdate();
+    }
+
+    // check and terminate if the task is in a final or pending state
+    this._terminateIfPendingOrFinalState();
+  }
+
+  public async start(taskParams: AgentTaskParams) {
+    this._ensureOpen();
+    let task = this.cx.currentTask;
+    if (!task) {
+      throw new Error("No task find to stream artifacts to");
+    }
+    // set the task state to 'working' if not already
+    if (task.status.state !== "working") {
+      this.cx.setOrUpdateTask(taskParams, "working");
+      await this._sendTaskStatusUpdate();
+    }
+
+    // check and terminate if the task is in a final or pending state
+    this._terminateIfPendingOrFinalState();
+  }
+
+  public async reject(taskParams: AgentTaskParams) {
+    // ensure the stream is open
+    this._ensureOpen();
+    // set the task state to 'rejected'
+    this.cx.setOrUpdateTask(taskParams, "rejected");
+    // send the status update
+    await this._sendTaskStatusUpdate();
+
+    // check and terminate if the task is in a final or pending state
+    this._terminateIfPendingOrFinalState();
+  }
+
+  public async authRequired(taskParams: AgentTaskParams) {
+    // ensure the stream is open
+    this._ensureOpen();
+    // set the task state to 'auth-required'
+    this.cx.setOrUpdateTask(taskParams, "auth-required");
+    // send the status update
+    await this._sendTaskStatusUpdate();
+
+    // check and terminate if the task is in a final or pending state
+    this._terminateIfPendingOrFinalState();
+  }
+
+  public async inputRequired(taskParams: AgentTaskParams) {
+    // ensure the stream is open
+    this._ensureOpen();
+    // set the task state to 'input-required'
+    this.cx.setOrUpdateTask(taskParams, "input-required");
+    // send the status update
+    await this._sendTaskStatusUpdate();
+
+    // check and terminate if the task is in a final or pending state
+    this._terminateIfPendingOrFinalState();
+  }
+
+  public async complete(taskParams: AgentTaskParams) {
+    // responding with task mean the task is completed
+    this._ensureOpen();
+    this.cx.setOrUpdateTask(taskParams, "completed");
+    // send the status update
+    await this._sendTaskStatusUpdate();
+
+    // check and terminate if the task is in a final or pending state
+    this._terminateIfPendingOrFinalState();
+  }
+}
+
+```
+
+`/Users/hra/Workspace/Code/tesser/front-agent/packages/sdk/src/server/agent/types.ts`:
+
+```ts
+import type {
+  MessageSendParams,
+  Part,
+  Artifact,
+  Message,
+  Task,
+  A2AError,
+  SendStreamingMessageSuccessResponse,
+  JSONRPCError,
+} from "../../types/types.ts";
+import { AgentTaskStream } from "./stream.ts";
+import type { IQueue } from "../providers/queue/queue.ts";
+import type { IStore } from "../providers/storage/index.ts";
+
+type TaskResult = Task;
+type MessageResult = Message;
+
+export type StreamResult = {
+  kind: "stream";
+  taskStream: AgentTaskStream;
+  currentTask: Task;
+};
+export type AgentExecutionResult =
+  | TaskResult
+  | MessageResult
+  | StreamResult
+  | A2AError;
+
+export type AgentRequest = {
+  params: MessageSendParams;
+  extension?: Record<string, any>;
+};
+
+export type EndOfStreamEvent = {
+  kind: "end-of-stream";
+  taskId?: string;
+  contextId?: string;
+};
+
+export type AgentStreamEvent =
+  | SendStreamingMessageSuccessResponse["result"]
+  | JSONRPCError
+  | EndOfStreamEvent;
+
+export type AgentStreamQueue = IQueue<AgentStreamEvent>;
+
+// Factory type for creating new IQueue instances
+export type StreamQueueFactory = () => AgentStreamQueue;
+// Factory type for creating new IStore instances
+export type TaskStoreFactory = () => IStore<Task>;
+
+/**
+ * Parameters passed to the message
+ */
+export type AgentMessageParams = {
+  parts: Part[];
+  metadata?: Record<string, any>;
+};
+
+/**
+ * Parameters passed to the task related response (reject, start, complete,...)
+ */
+export type AgentTaskParams = {
+  artifacts?: Artifact[];
+  message?: AgentMessageParams;
+  metadata?: Record<string, any>;
+};
+
+export type AgentArtifactParams = {
+  artifact: Artifact;
+  append?: boolean;
+  lastChunk?: boolean;
+};
+
+```
+
+`/Users/hra/Workspace/Code/tesser/front-agent/packages/sdk/src/server/http/hono/hono.ts`:
+
+```ts
+import { Hono } from "hono";
+import { A2AServer } from "../../index.ts";
+import { IAgentExecutor } from "../../agent/executor.ts";
+import { jsonRpcBodyParser } from "../../jsonRPC/jsonRpcBodyParser.ts";
+import { isJSONRPCError } from "../../../types/types.ts";
+import { internalError } from "../../../utils/errors.ts";
+import { streamSSE } from "hono/streaming";
+
+export async function createHonoApp({ a2aServer }: { a2aServer: A2AServer }) {
+  const app = new Hono();
+
+  // Start the a2a server
+  await a2aServer.start();
+
+  // JSON-RPC endpoint
+  app.post("/a2a", async (c) => {
+    try {
+      const bodyText = await c.req.text();
+      const parsed = await jsonRpcBodyParser(bodyText);
+
+      // If parser returns a JSONRPCError (has code/message), send JSON-RPC error response
+      if (isJSONRPCError(parsed)) {
+        return c.json({
+          jsonrpc: "2.0",
+          id: null,
+          error: parsed,
+        });
+      }
+      // Handle request
+      const result = await a2aServer.handleRequest(parsed);
+      if (result.response) {
+        return c.json(result.response);
+      } else if (result.stream) {
+        const stream = result.stream;
+        // Use Hono's StreamSSE helper for SSE
+        return streamSSE(c, async (sse) => {
+          for await (const jsonRpcResponse of stream) {
+            await sse.writeSSE({ data: JSON.stringify(jsonRpcResponse) });
+          }
+        });
+      } else {
+        // Unexpected result
+        return c.json({
+          jsonrpc: "2.0",
+          id: parsed?.id || null,
+          error: internalError(),
+        });
+      }
+    } catch (err: any) {
+      console.error(err);
+
+      return c.json({
+        jsonrpc: "2.0",
+        id: null,
+        error: internalError(),
+      });
+    }
+  });
+
+  // Agent card handler
+  app.get("/.well-known/agent.json", async (c) => {
+    return c.json(a2aServer.agentCard);
+  });
+
+  return app;
+}
+
+```
+
+`/Users/hra/Workspace/Code/tesser/front-agent/packages/sdk/src/server/taskStreamConsumer.ts`:
+
+```ts
+/**
+ * TaskStreamManager: Manages stream consumption for tasks, ensuring only one consumer per task stream.
+ * Allows other callers to tap into the ongoing stream and receive new events as they arrive.
+ *
+ * - Only the first request for a task starts consuming the stream.
+ * - Subsequent requests tap into the live stream and receive new events only.
+ * - When the stream ends, all tappers are notified and cleaned up.
+ */
+
+import type { AgentStreamEvent, AgentStreamQueue } from "./agent/types.ts";
+import type { AgentTaskStream } from "./agent/stream.ts";
+
+/**
+ * Represents a tapper/listener for the stream.
+ * Each tapper gets an async iterator for new events.
+ */
+type Tapper<T> = {
+  queue: Array<T>;
+  resolve: ((value: T | undefined) => void) | undefined;
+};
+
+export class TaskStreamConsumer {
+  private tappers: Set<Tapper<AgentStreamEvent>> = new Set();
+  private consuming: boolean = false;
+  // true when the stream is finished
+  private finished: boolean = false;
+  private readonly streamQueue: AgentStreamQueue;
+  private readonly isEndOfStreamEvent: (event: AgentStreamEvent) => boolean;
+  private readonly abortSignal?: AbortSignal;
+
+  constructor(
+    taskStream: AgentTaskStream,
+    isEndOfStreamEvent: (event: AgentStreamEvent) => boolean,
+    abortSignal?: AbortSignal
+  ) {
+    this.streamQueue = taskStream.streamQueue;
+    this.isEndOfStreamEvent = isEndOfStreamEvent;
+    this.abortSignal = abortSignal;
+  }
+
+  /**
+   * Adds a new tapper and returns an async generator for it.
+   */
+  public async *tap(): AsyncGenerator<AgentStreamEvent> {
+    const tapper: Tapper<AgentStreamEvent> = {
+      queue: [],
+      resolve: undefined,
+    };
+    this.tappers.add(tapper);
+    try {
+      while (!this.finished) {
+        if (tapper.queue.length > 0) {
+          const event = tapper.queue.shift()!;
+          yield event;
+        } else {
+          // wait for a new event
+          let event = await new Promise<AgentStreamEvent | undefined>(
+            (resolve: (value: AgentStreamEvent | undefined) => void) => {
+              tapper.resolve = resolve;
+            }
+          );
+          if (event) {
+            yield event;
+          } else {
+            break;
+          }
+        }
+      }
+    } finally {
+      this.tappers.delete(tapper);
+    }
+  }
+
+  /**
+   * Internal: Consumes the source queue and broadcasts events to tappers.
+   */
+  public async *consume() {
+    // if the stream is finished or already consuming, return
+    if (this.consuming || this.finished) return;
+
+    // set the stream as consuming
+    this.consuming = true;
+    try {
+      while (!this.abortSignal?.aborted) {
+        const event = await this.streamQueue.dequeue();
+
+        // this will not normally happen since the queue is blocking, but if for any reason the event is undefined the streamQueue is closed
+        if (!event) {
+          break;
+        }
+
+        // if the event is the end of stream, break and do not continue
+        if (this.isEndOfStreamEvent(event)) {
+          break;
+        }
+
+        // ToDo: update the task state in the store, if the event is a task update or artifact update.
+
+        // yield the event
+        yield event;
+
+        // Broadcast to all tappers
+        for (const tapper of this.tappers) {
+          //
+          if (tapper.resolve) {
+            tapper.resolve(event);
+          } else {
+            tapper.queue.push(event);
+          }
+        }
+      }
+    } catch (err) {
+      // ToDo: Notify all tappers of error/end
+    } finally {
+      // set the stream as finished and notify all tappers and clean up
+      this.finished = true;
+      for (const tapper of this.tappers) {
+        if (tapper.resolve) {
+          tapper.resolve(undefined);
+        }
+      }
+      this.tappers.clear();
+      this.consuming = false;
+    }
+  }
+}
+
+export class TaskStreamManager {
+  // Map of task ID to consumer
+  private consumers: Map<string, TaskStreamConsumer> = new Map();
+
+  public getConsumer(taskId: string): TaskStreamConsumer | undefined {
+    return this.consumers.get(taskId);
+  }
+
+  public createConsumer(
+    taskStream: AgentTaskStream,
+    isEndOfStreamEvent: (event: AgentStreamEvent) => boolean,
+    abortSignal?: AbortSignal
+  ): TaskStreamConsumer {
+    const task = taskStream.getTask();
+    let consumer = this.consumers.get(task.id);
+    if (consumer) {
+      throw new Error(`Stream for task ${task.id} is already being consumed`);
+    }
+    consumer = new TaskStreamConsumer(
+      taskStream,
+      isEndOfStreamEvent,
+      abortSignal
+    );
+    this.consumers.set(task.id, consumer);
+    return consumer;
+  }
+
+  public tapOrConsume(
+    taskStream: AgentTaskStream,
+    isEndOfStreamEvent: (event: AgentStreamEvent) => boolean,
+    abortSignal?: AbortSignal
+  ): AsyncGenerator<AgentStreamEvent> {
+    let consumer = this.consumers.get(taskStream.getTask().id);
+    if (consumer) {
+      // if the consumer is already created tap into it
+      return consumer.tap();
+    } else {
+      // if the consumer is not created, create it and kick off the consumer
+      consumer = this.createConsumer(
+        taskStream,
+        isEndOfStreamEvent,
+        abortSignal
+      );
+      return consumer.consume();
+    }
+  }
+
+  /**
+   * Optionally, remove a consumer when done (cleanup)
+   */
+  public remove(taskId: string) {
+    this.consumers.delete(taskId);
+  }
+}
+
+```
+
+`/Users/hra/Workspace/Code/tesser/front-agent/packages/sdk/src/server/index.ts`:
+
+```ts
+import {
+  JSONRPCServer,
+  type HandlerResponse,
+} from "./jsonRPC/jsonRpcServer.ts";
+import type { IStore } from "./providers/storage/index.ts";
+import type {
+  TaskStoreFactory,
+  StreamQueueFactory,
+  AgentStreamEvent,
+  AgentExecutionResult,
+  AgentRequest,
+} from "./agent/types.ts";
+import type { IAgentExecutor } from "./agent/executor.ts";
+import { AgentExecutionContext } from "./agent/context.ts";
+import { InMemoryStore } from "./providers/storage/in_memory.ts";
+import { InMemoryQueue } from "./providers/queue/in_memory.ts";
+import {
+  internalError,
+  invalidAgentResponseError,
+  pushNotificationNotSupportedError,
+  taskNotFoundError,
+} from "../utils/errors.ts";
+import {
+  CancelTaskRequest,
+  GetTaskPushNotificationConfigRequest,
+  isJSONRPCError,
+  JSONRPCRequest,
+  JSONRPCResponse,
+  SetTaskPushNotificationConfigRequest,
+  Task,
+  TaskPushNotificationConfig,
+  TaskResubscriptionRequest,
+  AgentCard,
+} from "../types/types.ts";
+import { TaskStreamManager } from "./taskStreamConsumer.ts";
+import {
+  SendMessageRequest,
+  SendStreamingMessageRequest,
+} from "../types/types.ts";
+import { isEndOfStream } from "./agent/stream.ts";
+
+// Placeholder types for telemetry and logging
+// Replace with actual implementations when available
+interface TelemetryProvider {
+  // Placeholder for telemetry integration
+}
+interface Logger {
+  // Placeholder for logger integration
+}
+
+interface A2AServerParams {
+  agentExecutor: IAgentExecutor;
+  agentCard: AgentCard;
+  taskStoreFactory?: TaskStoreFactory;
+  queueFactory?: StreamQueueFactory;
+  telemetryProvider?: TelemetryProvider;
+  logger?: Logger;
+}
+
+export class A2AServer {
+  private readonly _jsonRpcServer = new JSONRPCServer();
+  private readonly _taskStreamManager = new TaskStreamManager();
+  private readonly _taskStore: IStore<Task>;
+  private readonly _queueFactory: StreamQueueFactory; // Factory for creating new queues
+  private readonly _agentExecutor: IAgentExecutor;
+  private readonly _telemetryProvider?: TelemetryProvider;
+  private readonly _logger?: Logger;
+  private _isRunning: boolean = false;
+  private readonly _agentCard: AgentCard;
+
+  constructor({
+    agentExecutor,
+    agentCard,
+    taskStoreFactory = () => new InMemoryStore<Task>(),
+    queueFactory = () => new InMemoryQueue<AgentStreamEvent>(),
+    telemetryProvider,
+    logger,
+  }: A2AServerParams) {
+    this._taskStore = taskStoreFactory();
+    this._queueFactory = queueFactory;
+    this._agentExecutor = agentExecutor;
+    this._telemetryProvider = telemetryProvider;
+    this._logger = logger;
+    this.registerHandlers();
+    this._agentCard = agentCard;
+  }
+
+  private async _handleMessage(
+    request: SendMessageRequest | SendStreamingMessageRequest,
+    requestAbortSignal?: AbortSignal,
+    extension?: Record<string, any>
+  ): Promise<AgentExecutionResult> {
+    // Retrieve  and resolve any existing task
+    let task: Task | undefined;
+    if (request.params.message.taskId) {
+      task = await this._taskStore.get(request.params.message.taskId);
+      if (!task) {
+        return taskNotFoundError(
+          `Task ${request.params.message.taskId} not found`
+        );
+      }
+    }
+
+    // Retrieve and resolve any referenced tasks
+    let referencedTasks: Task[] | undefined;
+    if (request.params.message.referenceTaskIds) {
+      referencedTasks = (
+        await Promise.all(
+          request.params.message.referenceTaskIds.map((taskId) =>
+            this._taskStore.get(taskId)
+          )
+        )
+      ).filter((task) => task !== undefined);
+    }
+
+    // Create AgentExecutionContext
+    const agentRequest: AgentRequest = {
+      params: request.params,
+      extension,
+    };
+    const agentExecutionContext = new AgentExecutionContext(
+      agentRequest,
+      this._queueFactory,
+      task,
+      referencedTasks
+    );
+
+    // Call agentExecutor.execute and handle AgentExecutionResult
+    const result = await this._agentExecutor.execute(agentExecutionContext);
+    return result;
+  }
+
+  private async _handleMessageSend(
+    request: SendMessageRequest,
+    requestAbortSignal?: AbortSignal,
+    extension?: Record<string, any>
+  ): Promise<JSONRPCResponse> {
+    try {
+      // Handle the message
+      const result = await this._handleMessage(
+        request,
+        requestAbortSignal,
+        extension
+      );
+
+      // If JSONRPCError respond with the error
+      if (isJSONRPCError(result)) {
+        // return an error
+        return {
+          jsonrpc: "2.0",
+          id: request.id,
+          error: result,
+        };
+      }
+
+      // If Task or Message respond with the result
+      if (result.kind === "task" || result.kind === "message") {
+        // Store the task in the store if it is a task
+        if (result.kind === "task") {
+          await this._taskStore.set(result.id, result);
+        }
+        // Respond with the result
+        return {
+          jsonrpc: "2.0",
+          id: request.id,
+          result: result,
+        };
+      }
+
+      // If stream: respond with initial task, consume EventQueue and stream updates
+      if (result.kind === "stream") {
+        let { taskStream, currentTask } = result;
+        if (
+          taskStream.getTask().id !== currentTask.id ||
+          taskStream.getTask().contextId !== currentTask.contextId
+        ) {
+          throw new Error(
+            "Task mismatch. The task in stream does not match the current task"
+          );
+        }
+        // run the consumer
+        const ongoingConsumer = this._taskStreamManager.getConsumer(
+          taskStream.getTask().id
+        );
+        if (!ongoingConsumer) {
+          // if there is no consumer, create one and start it
+          let consumer = this._taskStreamManager.createConsumer(
+            taskStream,
+            isEndOfStream,
+            requestAbortSignal
+          );
+          consumer.consume();
+        }
+
+        // return the current task as initial response
+        return {
+          jsonrpc: "2.0",
+          id: request.id,
+          result: currentTask,
+        };
+      }
+      return {
+        jsonrpc: "2.0",
+        id: request.id,
+        error: invalidAgentResponseError("Unknown result type"),
+      };
+    } catch (error) {
+      return {
+        jsonrpc: "2.0",
+        id: request.id,
+        error: isJSONRPCError(error)
+          ? error
+          : invalidAgentResponseError(
+              error instanceof Error ? error.message : undefined
+            ),
+      };
+    }
+  }
+
+  private async *_handleMessageStream(
+    request: SendStreamingMessageRequest,
+    requestAbortSignal?: AbortSignal,
+    extension?: Record<string, any>
+  ): AsyncGenerator<JSONRPCResponse> {
+    try {
+      const result = await this._handleMessage(
+        request,
+        requestAbortSignal,
+        extension
+      );
+      if (isJSONRPCError(result)) {
+        // return an error
+        yield {
+          jsonrpc: "2.0",
+          id: request.id,
+          error: result,
+        };
+        return;
+      }
+
+      // If Task or Message yield the only result
+      if (result.kind === "task" || result.kind === "message") {
+        // Store the task in the store if it is a task
+        if (result.kind === "task") {
+          await this._taskStore.set(result.id, result);
+        }
+        // return the result
+        yield {
+          jsonrpc: "2.0",
+          id: request.id,
+          result: result,
+        };
+        return;
+      }
+
+      // If stream: yield the current task, consume EventQueue and stream updates
+      if (result.kind === "stream") {
+        let { taskStream, currentTask } = result;
+        // yield the current task as initial response
+        yield {
+          jsonrpc: "2.0",
+          id: request.id,
+          result: currentTask,
+        };
+
+        // if there is no consumer, create one and consume otherwise tap into the existing consumer
+        const eventConsumer = this._taskStreamManager.tapOrConsume(
+          taskStream,
+          isEndOfStream,
+          requestAbortSignal
+        );
+
+        // yield the events as they come
+        for await (const event of eventConsumer) {
+          yield {
+            jsonrpc: "2.0",
+            id: request.id,
+            result: event,
+          };
+        }
+      }
+    } catch (error) {
+      yield {
+        jsonrpc: "2.0",
+        id: request.id,
+        error: isJSONRPCError(error)
+          ? error
+          : invalidAgentResponseError(
+              error instanceof Error ? error.message : undefined
+            ),
+      };
+    }
+  }
+
+  private async _handleTaskPushNotificationGet(
+    request: GetTaskPushNotificationConfigRequest,
+    requestAbortSignal?: AbortSignal,
+    extension?: Record<string, any>
+  ): Promise<JSONRPCResponse> {
+    try {
+      // Check if the task exists
+      const taskId = request.params.id;
+      const task = await this._taskStore.get(taskId);
+      if (!task) {
+        return {
+          jsonrpc: "2.0",
+          id: request.id,
+          error: taskNotFoundError(`Task with ID ${taskId} not found`),
+        };
+      }
+
+      // This is a placeholder implementation
+      // TODO: Implement actual push notification configuration retrieval logic
+      return {
+        jsonrpc: "2.0",
+        id: request.id,
+        error: pushNotificationNotSupportedError(),
+      };
+    } catch (error) {
+      return {
+        jsonrpc: "2.0",
+        id: request.id,
+        error: isJSONRPCError(error)
+          ? error
+          : internalError(error instanceof Error ? error.message : undefined),
+      };
+    }
+  }
+
+  private async _handleTaskPushNotificationSet(
+    request: SetTaskPushNotificationConfigRequest,
+    requestAbortSignal?: AbortSignal,
+    extension?: Record<string, any>
+  ): Promise<JSONRPCResponse> {
+    try {
+      // Check if the task exists
+      const task = await this._taskStore.get(request.params.taskId);
+      if (!task) {
+        return {
+          jsonrpc: "2.0",
+          id: request.id,
+          error: taskNotFoundError(
+            `Task with ID ${request.params.taskId} not found`
+          ),
+        };
+      }
+
+      // This is a placeholder implementation
+      // TODO: Implement actual push notification configuration logic
+
+      // Return the received config as a confirmation
+      const result: TaskPushNotificationConfig = {
+        taskId: request.params.taskId,
+        pushNotificationConfig: {
+          ...request.params.pushNotificationConfig,
+          // Mask any sensitive credentials in the response
+          authentication: request.params.pushNotificationConfig.authentication
+            ? {
+                schemes:
+                  request.params.pushNotificationConfig.authentication.schemes,
+                // Omit credentials from response
+                credentials: undefined,
+              }
+            : undefined,
+        },
+      };
+
+      return {
+        jsonrpc: "2.0",
+        id: request.id,
+        result: result,
+      };
+    } catch (error) {
+      return {
+        jsonrpc: "2.0",
+        id: request.id,
+        error: isJSONRPCError(error)
+          ? error
+          : internalError(error instanceof Error ? error.message : undefined),
+      };
+    }
+  }
+
+  private async _handleTaskCancel(
+    request: CancelTaskRequest,
+    requestAbortSignal?: AbortSignal,
+    extension?: Record<string, any>
+  ): Promise<JSONRPCResponse> {
+    try {
+      // Get the task ID from the request params
+      const taskId = request.params?.id;
+
+      // Get the task from the store
+      const task = await this._taskStore.get(taskId);
+      if (!task) {
+        return {
+          jsonrpc: "2.0",
+          id: request.id,
+          error: taskNotFoundError(`Task with ID ${taskId} not found`),
+        };
+      }
+
+      // Call the agent executor's cancel method
+      const result = await this._agentExecutor.cancel(task);
+
+      // Check if the result is an error
+      if (isJSONRPCError(result)) {
+        return {
+          jsonrpc: "2.0",
+          id: request.id,
+          error: result,
+        };
+      }
+
+      // Return the updated task
+      return {
+        jsonrpc: "2.0",
+        id: request.id,
+        result: result,
+      };
+    } catch (error) {
+      return {
+        jsonrpc: "2.0",
+        id: request.id,
+        error: isJSONRPCError(error)
+          ? error
+          : invalidAgentResponseError(
+              error instanceof Error ? error.message : undefined
+            ),
+      };
+    }
+  }
+
+  private async *_handleTaskResubscribe(
+    request: TaskResubscriptionRequest,
+    requestAbortSignal?: AbortSignal,
+    extension?: Record<string, any>
+  ): AsyncGenerator<JSONRPCResponse> {
+    try {
+      // Retrieve  and resolve any existing task
+      let task: Task | undefined;
+
+      task = await this._taskStore.get(request.params.id);
+      if (!task) {
+        yield {
+          jsonrpc: "2.0",
+          id: request.id,
+          error: taskNotFoundError(`Task ${request.params.id} not found`),
+        };
+        return;
+      } else {
+        const ongoingConsumer = this._taskStreamManager.getConsumer(task.id);
+        // if there is no consumer, fail since the task is not active
+        if (!ongoingConsumer) {
+          yield {
+            jsonrpc: "2.0",
+            id: request.id,
+            error: taskNotFoundError(`Task ${request.params.id} is not active`),
+          };
+          return;
+        }
+
+        // tab into the ongoing consumer and yield the events as they come
+        for await (const event of ongoingConsumer.tap()) {
+          yield {
+            jsonrpc: "2.0",
+            id: request.id,
+            result: event,
+          };
+        }
+      }
+    } catch (error) {
+      yield {
+        jsonrpc: "2.0",
+        id: request.id,
+        error: isJSONRPCError(error)
+          ? error
+          : internalError(error instanceof Error ? error.message : undefined),
+      };
+    }
+  }
+
+  private registerHandlers() {
+    // 1. message/send
+    this._jsonRpcServer.setRequestHandler(
+      "message/send",
+      async (request, requestAbortSignal, extension) => {
+        const result = await this._handleMessageSend(
+          request,
+          requestAbortSignal,
+          extension
+        );
+        return { response: result };
+      }
+    );
+
+    // 2. message/stream
+    this._jsonRpcServer.setRequestHandler(
+      "message/stream",
+      async (request, requestAbortSignal, extension) => {
+        const result = await this._handleMessageStream(
+          request,
+          requestAbortSignal,
+          extension
+        );
+        return { stream: result };
+      }
+    );
+
+    // 3. tasks/cancel
+    this._jsonRpcServer.setRequestHandler(
+      "tasks/cancel",
+      async (request, requestAbortSignal, extension) => {
+        const result = await this._handleTaskCancel(
+          request,
+          requestAbortSignal,
+          extension
+        );
+        return { response: result };
+      }
+    );
+
+    // 4. tasks/pushNotification/set
+    this._jsonRpcServer.setRequestHandler(
+      "tasks/pushNotificationConfig/set",
+      async (request, requestAbortSignal, extension) => {
+        const result = await this._handleTaskPushNotificationSet(
+          request,
+          requestAbortSignal,
+          extension
+        );
+        return { response: result };
+      }
+    );
+
+    // 5. tasks/pushNotification/get
+    this._jsonRpcServer.setRequestHandler(
+      "tasks/pushNotificationConfig/get",
+      async (request, requestAbortSignal, extension) => {
+        const result = await this._handleTaskPushNotificationGet(
+          request,
+          requestAbortSignal,
+          extension
+        );
+        return { response: result };
+      }
+    );
+
+    // 6. tasks/resubscribe
+    this._jsonRpcServer.setRequestHandler(
+      "tasks/resubscribe",
+      async (request, requestAbortSignal, extension) => {
+        const result = await this._handleTaskResubscribe(
+          request,
+          requestAbortSignal,
+          extension
+        );
+        return { stream: result };
+      }
+    );
+  }
+
+  /**
+   * Starts the A2A server. Registers all handlers and performs any startup logic.
+   * Extend this method to start HTTP/SSE servers as needed.
+   */
+  public async start() {
+    // Placeholder: Startup logic for server, e.g., HTTP/SSE server initialization
+    // Placeholder: Register additional event listeners, health checks, etc.
+    // Placeholder: Logging and telemetry
+    this.registerHandlers();
+    this._isRunning = true;
+  }
+
+  /**
+   * Expose the JSONRPCServer handleRequest for integration with HTTP layer
+   */
+  public async handleRequest(
+    request: JSONRPCRequest,
+    requestAbortSignal?: AbortSignal,
+    extension?: Record<string, any>
+  ): Promise<HandlerResponse> {
+    if (!this._isRunning) {
+      throw new Error("Server is not running");
+    }
+    // parse request
+    return this._jsonRpcServer.handleRequest(
+      request,
+      requestAbortSignal,
+      extension
+    );
+  }
+
+  public get agentCard(): AgentCard {
+    return this._agentCard;
+  }
+}
+
+```

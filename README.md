@@ -1,17 +1,50 @@
 # 🤖↔️🤖 A2A SDK Developer Guide
 
-A2ALite is minimal modular SDK that simplifies building an **A2A-compliant server** by implementing a minimal interface. The SDK handles messaging, streaming, context and task management, and JSON-RPC protocol; to develop your agent, you only need to define your **agent's execution logic**.
+A2ALite is a lightweight, modular SDK that simplifies building **A2A-compliant servers** through a minimal interface. It handles messaging, streaming, context and task management, and JSON-RPC protocol, allowing you to focus solely on implementing your **agent's execution logic**. The SDK provides high-level primitives to handle A2A requests and responses, task management, and streaming.
 
 ---
 
 ## 📦 What Needs to Be Implemented
 
-The only thing you implement is the `IAgentExecutor` interface:
+The only thing that needs to be implemented ro enable an agent to process A2A requests is the `IAgentExecutor` interface:
 
 ```ts
+import { taskNotCancelableError } from "@a2a/sdk/utils/errors";
+import {
+  MessageHandler,
+  ArtifactHandler,
+  createTextPart,
+} from "@a2a/sdk/utils";
+
 interface IAgentExecutor {
   execute(context: AgentExecutionContext): Promise<AgentExecutionResult>;
   cancel(task: Task): Promise<Task | JSONRPCError>;
+}
+
+class MyAgentExecutor implements IAgentExecutor {
+  execute(context: AgentExecutionContext): Promise<AgentExecutionResult> {
+    // Read the input text message from the request
+    const messageText =
+      MessageHandler(context.request.params.message).getText() || "";
+    const echoCount = 5;
+
+    // return an stream to stream the response
+    return context.stream(async (stream) => {
+      for (let i = 0; i < echoCount; i++) {
+        await stream.writeArtifact({
+          artifact: ArtifactHandler.fromText(
+            `echo ${i}: ${messageText}`
+          ).getArtifact(),
+        });
+      }
+      // complete the task
+      await stream.complete();
+    });
+  }
+
+  cancel(task: Task): Promise<Task | JSONRPCError> {
+    return taskNotCancelableError("Task is not cancelable");
+  }
 }
 ```
 
@@ -19,25 +52,37 @@ Your implementation gets invoked automatically by the SDK when a message is rece
 
 ---
 
-## 🚀 Quick Start
+## 🚀 Start the A2A server
 
 ```ts
-import { A2AServer } from "@a2a/sdk/server";
-import { createHonoApp } from "@a2a/sdk/server/http/hono";
+import { A2AServer, createHonoApp } from "@a2a/sdk/server";
+import { serve } from "@hono/node-server";
+
+// your implementation of IAgentExecutor
 import { MyAgentExecutor } from "./myAgent.ts";
 
 const server = new A2AServer({
   agentExecutor: new MyAgentExecutor(),
   agentCard: {
-    id: "my-agent",
     name: "My Agent",
+    description: "A helpful AI assistant that can summarize documents",
     version: "1.0.0",
+    url: "http://localhost:3000/a2a",
+    skills: [
+      {
+        id: "doc_summarize",
+        name: "document summarization",
+        description: "Summarize a document",
+      },
+    ],
+    defaultInputModes: ["text/plain"],
+    defaultOutputModes: ["text/plain"],
   },
 });
 
 const app = await createHonoApp({ a2aServer: server });
 
-app.fire(); // or equivalent for your server runtime
+serve(app);
 ```
 
 ---
@@ -56,8 +101,8 @@ const server = new A2AServer({
   agentCard: {
     /* metadata */
   }, // Agent capabilities
-  taskStoreFactory, // Optional: Custom storage
-  queueFactory, // Optional: Custom queuing
+  taskStoreFactory, // Optional: factory method to create a custom storage
+  queueFactory, // Optional: factory method to create a custom queuing used by streams
 });
 ```
 
@@ -83,12 +128,12 @@ interface IAgentExecutor {
 
 - **Message** - Immediate replies (`context.message()`)
 - **Task** - Operations with final or pending results (`context.complete(), context.reject(), context.authRequired(), context.inputRequired()`)
-- **Stream** - Long-running operations (`context.stream()`)
-- **Error** - possible A2A erros during execution (e.g. `invalidAgentResponseError()`)
+- **Stream** - Long-running operations that stream results and artifacts (`context.stream()`)
+- **Error** - possible A2A errors during execution (e.g. `invalidAgentResponseError()`)
 
-### 📋 **AgentExecutionContext** - Rich execution environment
+### 📋 **AgentExecutionContext** - Provided Execution Environment
 
-The `AgentExecutionContext` provides all necessary tools for processing requests and managing responses. It includes methods to create different types of responses, automatically handling the association of context and task IDs. This means you don't need to manually track these IDs - they're automatically handled based on the current context and task when using the context's response methods:
+The `AgentExecutionContext` provides all necessary tools for processing requests and managing responses. It includes methods to create different types of responses, automatically handling the association of context and task IDs. This means you don't need to manually track these IDs, they're automatically handled based on the current context and task when using the context's response methods:
 
 ```ts
 async execute(context: AgentExecutionContext) {
@@ -101,8 +146,7 @@ async execute(context: AgentExecutionContext) {
 
   // Create different response types
   return context.complete({
-    message: { parts: [{ kind: 'text', text: 'Done!' }] },
-    artifacts: [results]
+    artifacts: [...resultArtifacts]
   });
 }
 ```
@@ -118,7 +162,7 @@ async execute(context: AgentExecutionContext) {
 
 ### 🌊 **AgentTaskStream** - Real-time streaming
 
-For long-running operations, use streaming to provide real-time updates to the client, this is decoupled from how the client receives the updates. If the client has initiated the request as streaming, the updates will be sent as they are generated. If the client has not initiated the request as streaming, the updates will aggregated in taskStore allowing the client to either resubscribe to the task or poll for updates.
+For long-running operations, use streaming to provide real-time updates to the client, this is decoupled from how the client receives the updates. If the client has initiated the request as streaming, the updates will be streamed to the client as they are generated. If the client has not initiated the request as streaming, the updates will get aggregated in taskStore allowing the client to either resubscribe to the task or poll for updates.
 
 ```ts
 return context.stream(async (stream) => {
@@ -134,17 +178,25 @@ return context.stream(async (stream) => {
     ).getArtifact(),
   });
 
-  // Finalize the stream as the task is completed, requested more input or reached to any final or pending state
-  await stream.complete({
-    message: { parts: [createTextPart("Complete!")] },
-    artifacts: [finalResults],
-  });
+  // check if more input is required
+  if (moreInputRequired) {
+    // Ask for more input
+    await stream.inputRequired({
+      message: { parts: [createTextPart("Please provide more input.")] },
+    });
+  } else {
+    // Finalize the stream as the task is completed
+    await stream.complete({
+      message: { parts: [createTextPart("Complete!")] },
+      artifacts: [finalResults],
+    });
+  }
 });
 ```
 
 **Stream capabilities:**
 
-- stream progress updates with `writeArtifact()`
+- Stream progress updates with `writeArtifact()`
 - Automatic stream lifecycle management
 - Task state transitions (working → completed/failed/canceled/rejected/input-required/auth-required)
 - Decoupled streaming from how the client receives the updates (Client can subscribe/resubscribe to ongoing streams)
@@ -157,68 +209,50 @@ The `execute(context)` method is called when a new message is received.
 
 Use the `context.stream(callback)` to emit streaming task updates. the callback function is passed an `AgentTaskStream` instance that can be used to stream progress updates and artifacts as they are generated.
 
-### ✅ Example: Streamed Execution
-
-```ts
-import { IAgentExecutor } from "@a2a/sdk/server/agent/executor";
-import { AgentTaskStream } from "@a2a/sdk/server/agent/stream";
-import { createTextPart } from "@a2a/sdk/utils/part";
-import { ArtifactHandler } from "@a2a/sdk/utils/artifact";
-
-export class MyAgentExecutor implements IAgentExecutor {
-  async execute(context) {
-    return context.stream(async (stream: AgentTaskStream) => {
-      await stream.start({
-        message: { parts: [createTextPart("Starting...")] },
-      });
-
-      const artifact = ArtifactHandler.fromText(
-        "Hello from MyAgent!"
-      ).getArtifact();
-      await stream.writeArtifact({ artifact });
-
-      await stream.complete({ message: { parts: [createTextPart("Done.")] } });
-    });
-  }
-
-  async cancel(task) {
-    return { ...task, status: { ...task.status, state: "canceled" } };
-  }
-}
-```
-
 ---
 
 ## 🛠 `AgentExecutionContext` Cheatsheet
 
 ```ts
+// access the request context
 context.request; // Incoming AgentRequest
 context.currentTask; // Possible existing task in this context
 context.referenceTasks; // Possible referenced tasks in this context
 
-context.stream(callback); // Begin a streamed task
+// generate execution result to return as response
 context.complete(params); // Mark task as complete
 context.reject(params); // Mark task as rejected
 context.authRequired(params); // Request user auth
 context.inputRequired(params); // Request user input
+
+// generate the result as a task stream to stream artifacts as they are generated
+context.stream(callback); // Begin a task stream
 ```
 
 ---
 
 ## 📡 Streaming with `AgentTaskStream`
 
-Inside your stream callback, use the stream to emit task events:
+Inside your stream callback, use the stream to emit task events or stream artifacts as they are generated:
 
 ```ts
 await stream.writeArtifact(...);   // Send one or more artifacts
 await stream.complete(...);        // Mark the task as complete
 ```
 
-if any input is required, use `context.inputRequired(params)`
+if any input is required, use `stream.inputRequired(params)` to request input.
 
 ```ts
-await context.inputRequired({
+await stream.inputRequired({
   message: { parts: [createTextPart("Please provide input.")] },
+});
+```
+
+similarly if authentication is required, use `stream.authRequired(params)` to request authentication.
+
+```ts
+await stream.authRequired({
+  message: { parts: [createTextPart("Please provide authentication.")] },
 });
 ```
 
@@ -246,17 +280,43 @@ createDataPart({ name: "John Doe", age: 42 });
 
 ### 💬 MessageHandler
 
+use `MessageHandler` to create messages or parse message parts.
+
 ```ts
-new MessageHandler().withRole("agent").addTextPart("Hi there").getMessage();
+// create message
+const message = new MessageHandler()
+  .withRole("agent")
+  .addTextPart("Hi there")
+  .addFilePart({ name: "report.pdf", uri: "..." })
+  .addDataPart({ name: "John Doe", age: 42 })
+  .getMessage();
+
+// parse message parts
+const text = new MessageHandler(message).getText();
+const files = new MessageHandler(message).getFiles();
+const data = new MessageHandler(message).getData();
 ```
 
 ### 📦 ArtifactHandler
 
+use `ArtifactHandler` to create artifacts or parse artifact parts.
+
 ```ts
-ArtifactHandler.fromText("Hello").getArtifact();
+// create artifact
+const artifact = ArtifactHandler.fromText("Hello")
+  .addFilePart({ name: "report.pdf", uri: "..." })
+  .addDataPart({ name: "John Doe", age: 42 })
+  .getArtifact();
+
+// parse artifact parts
+const text = new ArtifactHandler(artifact).getText();
+const files = new ArtifactHandler(artifact).getFiles();
+const data = new ArtifactHandler(artifact).getData();
 ```
 
 ### 🧠 TaskHandler (for advanced logic)
+
+use `TaskHandler` to create tasks.
 
 ```ts
 new TaskHandler().withStatus({ state: "working", ... })
@@ -264,8 +324,10 @@ new TaskHandler().withStatus({ state: "working", ... })
 
 ### ❗ Error Builders
 
+use error builders to create A2A errors.
+
 ```ts
-import { taskNotFoundError } from "@a2a/sdk/utils/errors";
+import { taskNotFoundError } from "@a2a/sdk/utils";
 
 return taskNotFoundError("No such task");
 ```
