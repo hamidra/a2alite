@@ -12,8 +12,8 @@ import { AgentTaskStream } from "./stream.ts";
 import type { IQueue } from "../providers/queue/queue.ts";
 import type { IStore } from "../providers/storage/index.ts";
 
-type TaskResult = Task;
-type MessageResult = Message;
+export type TaskResult = Task;
+export type MessageResult = Message;
 
 export type StreamResult = {
   kind: "stream";

@@ -1,4 +1,3 @@
-import { IncomingMessage, ServerResponse } from "http";
 import { jsonParseError, invalidRequestError } from "../../utils/errors.ts";
 import {
   JSONRPCError,

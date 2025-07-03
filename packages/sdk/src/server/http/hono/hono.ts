@@ -1,5 +1,5 @@
 import { Hono } from "hono";
-import { A2AServer } from "../../index.ts";
+import { A2AServer } from "../../server/server.ts";
 import { IAgentExecutor } from "../../agent/executor.ts";
 import { jsonRpcBodyParser } from "../../jsonRPC/jsonRpcBodyParser.ts";
 import { isJSONRPCError } from "../../../types/types.ts";
