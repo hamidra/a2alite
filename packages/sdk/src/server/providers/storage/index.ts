@@ -1,5 +1,11 @@
 /**
- * Store - A generic key-value store interface for task context and state management
+ * Generic key-value store interface for task context and state management
+ * 
+ * IStore provides a standard interface for persisting and retrieving data
+ * within the A2A server. It supports TTL (time-to-live) for automatic
+ * expiration and provides optional methods for advanced operations.
+ * 
+ * @template T - The type of values stored in this store
  */
 interface IStore<T = any> {
   /**

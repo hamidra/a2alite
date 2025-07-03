@@ -39,24 +39,44 @@ import {
 } from "../../types/types.ts";
 import { isEndOfStream } from "../agent/stream.ts";
 
-// Placeholder types for telemetry and logging
-// Replace with actual implementations when available
+/**
+ * Placeholder interface for telemetry integration
+ * Replace with actual implementations when available
+ */
 interface TelemetryProvider {
   // Placeholder for telemetry integration
 }
+
+/**
+ * Placeholder interface for logger integration
+ * Replace with actual implementations when available
+ */
 interface Logger {
   // Placeholder for logger integration
 }
 
+/**
+ * Configuration parameters for creating an A2AServer instance
+ */
 interface A2AServerParams {
+  /** The agent executor that handles message processing and task execution */
   agentExecutor: IAgentExecutor;
+  /** Agent card containing metadata about the agent's capabilities */
   agentCard: AgentCard;
+  /** Factory function to create task storage instances. Defaults to InMemoryStore */
   taskStoreFactory?: TaskStoreFactory;
+  /** Factory function to create stream queue instances. Defaults to InMemoryQueue */
   queueFactory?: StreamQueueFactory;
+  /** Optional telemetry provider for monitoring and metrics */
   telemetryProvider?: TelemetryProvider;
+  /** Optional logger for debugging and audit trails */
   logger?: Logger;
 }
 
+/**
+ * A2AServer implements the Agent-to-Agent (A2A) protocol server functionality.
+ * It handles JSON-RPC requests for message processing, task management, and streaming operations.
+ */
 class A2AServer {
   private readonly _jsonRpcServer = new JSONRPCServer();
   private readonly _taskStreamManager = new TaskStreamManager();
@@ -68,6 +88,10 @@ class A2AServer {
   private _isRunning: boolean = false;
   private readonly _agentCard: AgentCard;
 
+  /**
+   * Creates a new A2AServer instance
+   * @param params Configuration parameters for the server
+   */
   constructor({
     agentExecutor,
     agentCard,
@@ -85,6 +109,14 @@ class A2AServer {
     this._agentCard = agentCard;
   }
 
+  /**
+   * Internal method to handle incoming messages and create agent execution context
+   * @param request - The message request to process
+   * @param requestAbortSignal - Optional abort signal for canceling the request
+   * @param extension - Optional extension data passed to the agent
+   * @returns Promise resolving to the agent execution result
+   * @private
+   */
   private async _handleMessage(
     request: SendMessageRequest | SendStreamingMessageRequest,
     requestAbortSignal?: AbortSignal,
@@ -130,6 +162,14 @@ class A2AServer {
     return result;
   }
 
+  /**
+   * Handles synchronous message sending requests
+   * @param request - The message send request
+   * @param requestAbortSignal - Optional abort signal for canceling the request
+   * @param extension - Optional extension data passed to the agent
+   * @returns Promise resolving to a JSON-RPC response
+   * @private
+   */
   private async _handleMessageSend(
     request: SendMessageRequest,
     requestAbortSignal?: AbortSignal,
@@ -217,6 +257,14 @@ class A2AServer {
     }
   }
 
+  /**
+   * Handles streaming message requests using async generators
+   * @param request - The streaming message request
+   * @param requestAbortSignal - Optional abort signal for canceling the request
+   * @param extension - Optional extension data passed to the agent
+   * @returns AsyncGenerator yielding JSON-RPC responses as they become available
+   * @private
+   */
   private async *_handleMessageStream(
     request: SendStreamingMessageRequest,
     requestAbortSignal?: AbortSignal,
@@ -292,6 +340,15 @@ class A2AServer {
     }
   }
 
+  /**
+   * Handles requests to get push notification configuration for a task
+   * Currently returns not supported error as this is a placeholder implementation
+   * @param request - The push notification config get request
+   * @param requestAbortSignal - Optional abort signal for canceling the request
+   * @param extension - Optional extension data
+   * @returns Promise resolving to a JSON-RPC response
+   * @private
+   */
   private async _handleTaskPushNotificationGet(
     request: GetTaskPushNotificationConfigRequest,
     requestAbortSignal?: AbortSignal,
@@ -327,6 +384,15 @@ class A2AServer {
     }
   }
 
+  /**
+   * Handles requests to set push notification configuration for a task
+   * Currently returns the config as confirmation but doesn't implement actual notifications
+   * @param request - The push notification config set request
+   * @param requestAbortSignal - Optional abort signal for canceling the request
+   * @param extension - Optional extension data
+   * @returns Promise resolving to a JSON-RPC response with masked credentials
+   * @private
+   */
   private async _handleTaskPushNotificationSet(
     request: SetTaskPushNotificationConfigRequest,
     requestAbortSignal?: AbortSignal,
@@ -381,6 +447,14 @@ class A2AServer {
     }
   }
 
+  /**
+   * Handles task cancellation requests by delegating to the agent executor
+   * @param request - The task cancel request
+   * @param requestAbortSignal - Optional abort signal for canceling the request
+   * @param extension - Optional extension data
+   * @returns Promise resolving to a JSON-RPC response with the updated task or error
+   * @private
+   */
   private async _handleTaskCancel(
     request: CancelTaskRequest,
     requestAbortSignal?: AbortSignal,
@@ -431,6 +505,14 @@ class A2AServer {
     }
   }
 
+  /**
+   * Handles task resubscription requests to continue receiving updates for an active task
+   * @param request - The task resubscription request
+   * @param requestAbortSignal - Optional abort signal for canceling the request
+   * @param extension - Optional extension data
+   * @returns AsyncGenerator yielding JSON-RPC responses for ongoing task updates
+   * @private
+   */
   private async *_handleTaskResubscribe(
     request: TaskResubscriptionRequest,
     requestAbortSignal?: AbortSignal,
@@ -480,6 +562,11 @@ class A2AServer {
     }
   }
 
+  /**
+   * Registers all JSON-RPC method handlers with the internal JSON-RPC server
+   * This method sets up the routing for all A2A protocol methods
+   * @private
+   */
   private registerHandlers() {
     // 1. message/send
     this._jsonRpcServer.setRequestHandler(
@@ -561,10 +648,10 @@ class A2AServer {
   }
 
   /**
-   * Starts the A2A server. Registers all handlers and performs any startup logic.
-   * Extend this method to start HTTP/SSE servers as needed.
+   * Starts the A2A server by registering all handlers and performing startup logic.
+   * Must be called before handling requests.
    */
-  public async start() {
+  public async start(): Promise<void> {
     // Placeholder: Startup logic for server, e.g., HTTP/SSE server initialization
     // Placeholder: Register additional event listeners, health checks, etc.
     // Placeholder: Logging and telemetry
@@ -573,7 +660,13 @@ class A2AServer {
   }
 
   /**
-   * Expose the JSONRPCServer handleRequest for integration with HTTP layer
+   * Handles incoming JSON-RPC requests and routes them to appropriate handlers.
+   * This method is used by HTTP layers to process A2A protocol requests.
+   * @param request The JSON-RPC request to handle
+   * @param requestAbortSignal Optional abort signal for canceling the request
+   * @param extension Optional extension data passed to handlers
+   * @returns Promise resolving to handler response (either single response or stream)
+   * @throws Error if the server is not running
    */
   public async handleRequest(
     request: JSONRPCRequest,
@@ -591,6 +684,10 @@ class A2AServer {
     );
   }
 
+  /**
+   * Gets the agent card containing metadata about the agent's capabilities
+   * @returns The agent card
+   */
   public get agentCard(): AgentCard {
     return this._agentCard;
   }

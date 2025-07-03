@@ -1,5 +1,11 @@
 /**
- * Queue - A generic queue interface for task management
+ * Generic queue interface for task management and event streaming
+ * 
+ * IQueue provides a standard interface for enqueueing and dequeueing items
+ * with support for blocking operations. It's primarily used for managing
+ * agent stream events and task-related communications.
+ * 
+ * @template T - The type of items stored in this queue
  */
 interface IQueue<T> {
   /**

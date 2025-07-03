@@ -86,6 +86,7 @@ class AgentExecutionContext {
    * @param taskId - Optional task ID
    * @param messageId - Optional custom message ID (auto-generated if not provided)
    * @returns Message with context and task metadata
+   * @private
    */
   private _createMessage(
     messageParams: AgentMessageParams,
@@ -110,6 +111,13 @@ class AgentExecutionContext {
    * @param taskId - Optional task ID for new tasks
    * @returns The created or updated task
    */
+  /**
+   * Creates a task status object with timestamp and optional message
+   * @param state - The task state
+   * @param message - Optional status message
+   * @returns TaskStatus object with timestamp
+   * @private
+   */
   private _createStatus(state: TaskState, message?: Message): TaskStatus {
     return {
       state,
@@ -118,6 +126,13 @@ class AgentExecutionContext {
     };
   }
 
+  /**
+   * Merges existing artifacts with new artifacts
+   * @param existing - Current artifacts array
+   * @param newArtifacts - New artifacts to add
+   * @returns Combined artifacts array
+   * @private
+   */
   private _mergeArtifacts(
     existing: Artifact[] = [],
     newArtifacts: Artifact[] = []
@@ -125,6 +140,14 @@ class AgentExecutionContext {
     return [...(existing || []), ...(newArtifacts || [])];
   }
 
+  /**
+   * Creates a new task or updates the current task with new parameters
+   * @param taskParams - Task parameters including artifacts and metadata
+   * @param taskState - New state for the task
+   * @param taskId - Optional task ID for new tasks
+   * @returns The created or updated task
+   * @private
+   */
   private _createOrUpdateTask(
     taskParams: AgentTaskParams | undefined | null,
     taskState: TaskState,

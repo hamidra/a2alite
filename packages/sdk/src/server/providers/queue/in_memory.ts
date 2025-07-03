@@ -2,12 +2,19 @@ import { IQueue } from "./queue.ts";
 
 /**
  * In-memory implementation of IQueue<T>
+ * 
+ * InMemoryQueue provides a simple, non-persistent queue implementation
+ * with support for blocking dequeue operations. When the queue is empty,
+ * dequeue operations will block until an item is available or the queue is closed.
+ * 
+ * @template T - The type of items stored in this queue
  */
 class InMemoryQueue<T> implements IQueue<T> {
+  /** Internal array storing queue items */
   private items: T[] = [];
+  /** Whether the queue has been closed */
   private _isClosed: boolean = false;
-
-  // Pending promises for dequeue operations
+  /** Pending promises for blocked dequeue operations */
   private pendingDequeuePromises: Array<(value: T | undefined) => void> = [];
 
   async dequeue(): Promise<T | undefined> {
@@ -31,6 +38,10 @@ class InMemoryQueue<T> implements IQueue<T> {
     this.resolvePendingPromises();
   }
 
+  /**
+   * Resolves pending dequeue promises with available items
+   * @private
+   */
   private resolvePendingPromises() {
     // iterate and resolve any pending promises as long as there are items in the queue
     while (this.pendingDequeuePromises.length > 0 && this.items.length > 0) {
@@ -52,7 +63,10 @@ class InMemoryQueue<T> implements IQueue<T> {
     return this.items[0];
   }
 
-  // clear the queue and resolve any pending promises with undefined to close the queue
+  /**
+   * Closes the queue and resolves any pending promises with undefined
+   * Once closed, the queue cannot be used for further operations
+   */
   async close(): Promise<void> {
     this.items = [];
     // iterate and resolve any pending promises as long as there are items in the queue

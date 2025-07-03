@@ -59,6 +59,8 @@ class TaskStreamConsumer {
               tapper.resolve = resolve;
             }
           );
+          // tappers are blocked until an event is available.
+          // when the stream is finished, the event will be undefined
           if (event) {
             yield event;
           } else {

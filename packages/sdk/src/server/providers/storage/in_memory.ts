@@ -2,6 +2,12 @@ import { IStore } from "./index.ts";
 
 /**
  * In-memory implementation of IStore<T>
+ * 
+ * InMemoryStore provides a simple, non-persistent storage implementation
+ * suitable for development and testing. It supports TTL (time-to-live)
+ * with automatic cleanup of expired entries.
+ * 
+ * @template T - The type of values stored in this store
  */
 class InMemoryStore<T = any> implements IStore<T> {
   private store = new Map<string, { value: T; expiresAt?: number }>();
@@ -58,7 +64,9 @@ class InMemoryStore<T = any> implements IStore<T> {
   }
 
   /**
-   * Remove expired entries
+   * Remove expired entries from the store
+   * Called automatically by methods that enumerate the store
+   * @private
    */
   private cleanupExpired() {
     const now = Date.now();

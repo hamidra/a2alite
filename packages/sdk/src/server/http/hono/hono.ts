@@ -6,6 +6,19 @@ import { isJSONRPCError } from "../../../types/types.ts";
 import { internalError } from "../../../utils/errors.ts";
 import { streamSSE } from "hono/streaming";
 
+/**
+ * Creates a Hono HTTP application configured for A2A protocol communication
+ * 
+ * This function sets up the necessary HTTP endpoints for the A2A protocol:
+ * - POST /a2a - Main JSON-RPC endpoint for agent communication
+ * - GET /.well-known/agent.json - Agent discovery endpoint
+ * 
+ * The application handles both synchronous and streaming responses using Server-Sent Events.
+ * 
+ * @param params - Configuration object
+ * @param params.a2aServer - The A2A server instance to handle requests
+ * @returns Promise resolving to a configured Hono application instance
+ */
 async function createHonoApp({ a2aServer }: { a2aServer: A2AServer }) {
   const app = new Hono();
 
