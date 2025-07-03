@@ -1,6 +1,6 @@
 {
   "name": "@a2alite/sdk",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "description": "A Modular SDK (Server & Client) for Agent to Agent (A2A) protocol, with easy task lifecycle management",
   "keywords": [
     "A2A",
@@ -39,8 +39,7 @@
     "build:esm": "tsc --project tsconfig.esm.json",
     "build:cjs": "tsc --project tsconfig.cjs.json",
     "clean": "rimraf dist",
-    "prepublishOnly": "pnpm run build",
-    "publish": "npm publish --access public"
+    "prepublishOnly": "pnpm run build"
   },
   "devDependencies": {
     "rimraf": "^5.0.5",
