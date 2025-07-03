@@ -154,7 +154,7 @@ class MessageHandler {
     );
   }
 
-  getData(): Record<string, any> {
+  getData(): Record<string, any>[] {
     return this.getDataParts().map((part) => part.data);
   }
 }

@@ -72,10 +72,20 @@ class ArtifactHandler {
     );
   }
 
+  getText(): string {
+    return this.getTextParts()
+      .map((part) => part.text)
+      .join("\n");
+  }
+
   getFileParts(): Array<FilePart> {
     return this.artifact.parts.filter(
       (part: Part): part is FilePart => part.kind === "file"
     );
+  }
+
+  getFiles(): Array<FileWithBytes | FileWithUri> {
+    return this.getFileParts().map((part) => part.file);
   }
 
   getDataParts(): Array<DataPart> {
@@ -84,7 +94,12 @@ class ArtifactHandler {
     );
   }
 
+  getData(): Array<Record<string, any>> {
+    return this.getDataParts().map((part) => part.data);
+  }
+
   // Static factory methods
+
   static fromText(
     text: string,
     metadata?: Record<string, any>
