@@ -1,12 +1,16 @@
-import { createHonoApp } from "@a2alite/sdk/server/http/hono/hono.js";
 import { serve } from "@hono/node-server";
-import { A2AServer } from "@a2alite/sdk/server/index.js";
-import { IAgentExecutor } from "@a2alite/sdk/server/agent/executor.js";
-import { taskNotCancelableError } from "@a2alite/sdk/utils/errors.js";
-import { AgentCard, Part, Task } from "@a2alite/sdk/types/types.js";
-import { AgentExecutionContext } from "@a2alite/sdk/server/agent/context.js";
-import { createTextPart } from "@a2alite/sdk/utils/part.js";
-import { MessageHandler } from "@a2alite/sdk/utils/message.js";
+import type {
+  IAgentExecutor,
+  AgentExecutionContext,
+} from "@a2alite/sdk/server";
+import type { Task, Part, AgentCard } from "@a2alite/sdk/types";
+import { createHonoApp, A2AServer } from "@a2alite/sdk/server";
+
+import {
+  taskNotCancelableError,
+  createTextPart,
+  MessageHandler,
+} from "@a2alite/sdk/utils";
 
 const agentCard: AgentCard = {
   name: "Echo Agent",

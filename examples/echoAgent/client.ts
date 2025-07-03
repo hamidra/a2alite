@@ -1,5 +1,5 @@
-import { MessageHandler } from "@a2alite/sdk/utils/message.js";
-import { A2AClient } from "@a2alite/sdk/client/a2aClient.js";
+import { MessageHandler } from "@a2alite/sdk/utils";
+import { A2AClient } from "@a2alite/sdk/client";
 
 async function run() {
   const client = await A2AClient.getClientFromUrl("http://localhost:3000");
