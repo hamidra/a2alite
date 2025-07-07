@@ -1,0 +1,34 @@
+{
+  "$schema": "https://typedoc.org/schema.json",
+  "name": "A2A Lite SDK Documentation",
+  "entryPoints": [
+    "./packages/sdk/src/server/index.ts",
+    "./packages/sdk/src/client/index.ts",
+    "./packages/sdk/src/utils/index.ts",
+    "./packages/sdk/src/types/types.ts"
+  ],
+  "entryPointStrategy": "resolve",
+  "out": "./docs",
+  "tsconfig": "./packages/sdk/tsconfig.base.json",
+  "theme": "default",
+  "excludeExternals": true,
+  "excludePrivate": true,
+  "excludeProtected": true,
+  "excludeInternal": true,
+  "readme": "./README.md",
+  "includeVersion": true,
+  "sort": ["source-order"],
+  "navigation": {
+    "includeCategories": true,
+    "includeGroups": true
+  },
+  "categorizeByGroup": true,
+  "searchInComments": true,
+  "searchInDocuments": true,
+  "cleanOutputDir": true,
+  "treatWarningsAsErrors": false,
+  "logLevel": "Info",
+  "gitRevision": "main",
+  "gitRemote": "origin",
+  "plugin": ["typedoc-plugin-zod"]
+}

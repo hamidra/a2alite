@@ -19,6 +19,8 @@
     "test": "pnpm -r test",
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\"",
     "clean": "pnpm -r clean",
+    "docs:build": "typedoc",
+    "docs:serve": "typedoc --serve",
     "publish:sdk": "pnpm --filter @a2alite/sdk publish",
     "version:patch": "pnpm --filter @a2alite/sdk version patch",
     "version:minor": "pnpm --filter @a2alite/sdk version minor"
@@ -26,6 +28,8 @@
   "devDependencies": {
     "prettier": "^3.6.2",
     "rimraf": "^5.0.5",
+    "typedoc": "^0.28.7",
+    "typedoc-plugin-zod": "^1.4.2",
     "typescript": "^5.8.3"
   }
 }
