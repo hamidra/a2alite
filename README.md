@@ -1,6 +1,10 @@
 # 🤖↔️🤖 A2A SDK Developer Guide
 
-A2ALite is a lightweight, modular SDK that simplifies building **A2A-compliant servers** through a minimal interface. It handles messaging, streaming, context and task management, and JSON-RPC protocol, allowing you to focus solely on implementing your **agent's execution logic**. The SDK provides high-level primitives to handle A2A requests and responses, task management, and streaming.
+**A2ALite** is a lightweight, modular SDK designed to make building **A2A-compliant servers** as simple as building HTTP servers. Inspired by familiar patterns from frameworks like Hono and Express, it offers a minimal, intuitive interface for rapid development.
+
+A2ALite handles the complexity of messaging, streaming, context and task management, and the JSON-RPC protocol, so you can focus entirely on your **agent’s execution logic**. It provides high-level primitives for managing A2A requests and responses, background tasks, and streaming data with ease.
+
+For comprehensive examples of how to implement an A2A-compliant server, explore the [examples](examples) directory.
 
 ## Key Features and Benefits
 
@@ -157,11 +161,11 @@ async execute(context: AgentExecutionContext) {
 **Available response methods:**
 
 - [`context.message()`](packages/sdk/src/server/agent/context.ts#L274) - return an immediate message response
-- `context.complete()` - return a completed task with results
-- `context.reject()` - return a rejected task
-- `context.authRequired()` - return a task requiring authentication
-- `context.inputRequired()` - return a task requiring additional input
-- `context.stream()` - return a streaming task allowing for incremental updates (e.g. progress updates, artifacts)
+- [`context.complete()`](packages/sdk/src/server/agent/context.ts#L262) - return a completed task with results
+- [`context.reject()`](packages/sdk/src/server/agent/context.ts#L226) - return a rejected task
+- [`context.authRequired()`](packages/sdk/src/server/agent/context.ts#L238) - return a task requiring authentication
+- [`context.inputRequired()`](packages/sdk/src/server/agent/context.ts#L250) - return a task requiring additional input
+- [`context.stream()`](packages/sdk/src/server/agent/context.ts#L206) - return a streaming task allowing for incremental updates (e.g. progress updates, artifacts)
 
 ### **AgentTaskStream** - Real-time streaming
 
@@ -199,17 +203,16 @@ return context.stream(async (stream) => {
 
 **Stream capabilities:**
 
-- Stream progress updates with `writeArtifact()`
-- Automatic stream lifecycle management
-- Task state transitions (working → completed/failed/canceled/rejected/input-required/auth-required)
-- Decoupled streaming from how the client receives the updates (Client can subscribe/resubscribe to ongoing streams)
+- Stream artifact updates with `writeArtifact()`
+- Handle task state transitions (working → completed/failed/canceled/rejected/input-required/auth-required)
+- Automated task lifecycle management with real-time streaming of status updates to clients on state changes.
+- Flexible response handling: Clients can choose between streaming responses or polling for updates, regardless of if the agent returns or streams results.
 
 ---
 
 ## Implementing `execute()`
 
 The `execute(context)` method is called when a new message is received.
-
 Use the `context.stream(callback)` to emit streaming task updates. the callback function is passed an `AgentTaskStream` instance that can be used to stream progress updates and artifacts as they are generated.
 
 ---
@@ -275,7 +278,7 @@ Use these helpers to avoid manual object construction.
 
 ### Parts
 
-Use `createTextPart`, `createFilePart`, and `createDataPart` to create parts for messages and artifacts.
+Use [`createTextPart`](packages/sdk/src/utils/part.ts#L12), [`createFilePart`](packages/sdk/src/utils/part.ts#L26), and [`createDataPart`](packages/sdk/src/utils/part.ts#L52) to create parts for messages and artifacts.
 
 ```ts
 createTextPart("Hello");
@@ -285,7 +288,7 @@ createDataPart({ name: "John Doe", age: 42 });
 
 ### MessageHandler
 
-Use `MessageHandler` to create messages or parse message parts.
+Use [`MessageHandler`](packages/sdk/src/utils/message.ts#L17) to create messages or parse message parts.
 
 ```ts
 // create message
@@ -304,7 +307,7 @@ const data = new MessageHandler(message).getData();
 
 ### ArtifactHandler
 
-Use `ArtifactHandler` to create artifacts or parse artifact parts.
+Use [`ArtifactHandler`](packages/sdk/src/utils/artifact.ts#L13) to create artifacts or parse artifact parts.
 
 ```ts
 // create artifact
@@ -321,7 +324,7 @@ const data = new ArtifactHandler(artifact).getData();
 
 ### TaskHandler (for advanced logic)
 
-Use `TaskHandler` to create tasks.
+Use [`TaskHandler`](packages/sdk/src/utils/task.ts#L13) to create tasks.
 
 ```ts
 new TaskHandler().withStatus({ state: "working", ... })
@@ -329,7 +332,7 @@ new TaskHandler().withStatus({ state: "working", ... })
 
 ### Error Builders
 
-Use error builders to create A2A errors.
+Use [error builders](packages/sdk/src/utils/errors.ts) to create A2A errors.
 
 ```ts
 import { taskNotFoundError } from "@a2a/sdk/utils";
@@ -348,4 +351,4 @@ return taskNotFoundError("No such task");
 ## Acknowledgments
 
 - [A2A Specification](https://google.github.io/A2A/specification/)
-- Inspired by various agent frameworks and communication protocols
+- Inspired by various http server frameworks and communication protocols (express, hono)

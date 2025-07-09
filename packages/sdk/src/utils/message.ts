@@ -11,6 +11,9 @@ import {
   DataPart,
 } from "../types/types.ts";
 
+/**
+ * Helper class to create, modify or parse messages
+ */
 class MessageHandler {
   private message: Message;
 
