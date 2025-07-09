@@ -2,9 +2,13 @@
 
 A2ALite is a lightweight, modular SDK that simplifies building **A2A-compliant servers** through a minimal interface. It handles messaging, streaming, context and task management, and JSON-RPC protocol, allowing you to focus solely on implementing your **agent's execution logic**. The SDK provides high-level primitives to handle A2A requests and responses, task management, and streaming.
 
----
+## Key Features and Benefits
 
-## 📦 What Needs to Be Implemented
+- Simplest way to build A2A-compliant servers.
+- Minimal interface, abstracting away A2A protocol complexity.
+- Modular, allowing you to easily swap out implementations of components.
+
+## What Needs to Be Implemented
 
 The only thing that needs to be implemented ro enable an agent to process A2A requests is the `IAgentExecutor` interface:
 
@@ -24,8 +28,9 @@ interface IAgentExecutor {
 class MyAgentExecutor implements IAgentExecutor {
   execute(context: AgentExecutionContext): Promise<AgentExecutionResult> {
     // Read the input text message from the request
-    const messageText =
-      MessageHandler(context.request.params.message).getText() || "";
+    const messageText = MessageHandler(
+      context.request.params.message
+    ).getText();
     const echoCount = 5;
 
     // return an stream to stream the response
@@ -50,9 +55,7 @@ class MyAgentExecutor implements IAgentExecutor {
 
 Your implementation gets invoked automatically by the SDK when a message is received.
 
----
-
-## 🚀 Start the A2A server
+## Start the A2A server
 
 ```ts
 import { A2AServer, createHonoApp } from "@a2a/sdk/server";
@@ -87,11 +90,11 @@ serve(app);
 
 ---
 
-## 🧠 Core Concepts
+## Core Concepts
 
 Understanding these four key concepts is essential for building A2A-compatible agents using A2ALite:
 
-### 🚀 **A2AServer** - Main server orchestrator
+### **A2AServer** - Main server orchestrator
 
 The `A2AServer` is the central component that orchestrates all A2A protocol operations:
 
@@ -101,8 +104,8 @@ const server = new A2AServer({
   agentCard: {
     /* metadata */
   }, // Agent capabilities
-  taskStoreFactory, // Optional: factory method to create a custom storage
-  queueFactory, // Optional: factory method to create a custom queuing used by streams
+  taskStoreFactory, // Optional factory method to create a custom storage
+  queueFactory, // Optional factory method to create a custom queuing used by streams
 });
 ```
 
@@ -113,7 +116,7 @@ const server = new A2AServer({
 - Provides agent discovery endpoint (`/.well-known/agent.json`)
 - Coordinates streaming and real-time updates
 
-### 🎯 **IAgentExecutor** - Your agent implementation
+### **IAgentExecutor** - Your agent implementation
 
 This is the only interface you need to implement. Your agent logic goes here:
 
@@ -131,7 +134,7 @@ interface IAgentExecutor {
 - **Stream** - Long-running operations that stream results and artifacts (`context.stream()`)
 - **Error** - possible A2A errors during execution (e.g. `invalidAgentResponseError()`)
 
-### 📋 **AgentExecutionContext** - Provided Execution Environment
+### **AgentExecutionContext** - Provided Execution Environment
 
 The `AgentExecutionContext` provides all necessary tools for processing requests and managing responses. It includes methods to create different types of responses, automatically handling the association of context and task IDs. This means you don't need to manually track these IDs, they're automatically handled based on the current context and task when using the context's response methods:
 
@@ -153,14 +156,14 @@ async execute(context: AgentExecutionContext) {
 
 **Available response methods:**
 
-- `context.message()` - return an immediate message response
+- [`context.message()`](packages/sdk/src/server/agent/context.ts#L274) - return an immediate message response
 - `context.complete()` - return a completed task with results
 - `context.reject()` - return a rejected task
 - `context.authRequired()` - return a task requiring authentication
 - `context.inputRequired()` - return a task requiring additional input
 - `context.stream()` - return a streaming task allowing for incremental updates (e.g. progress updates, artifacts)
 
-### 🌊 **AgentTaskStream** - Real-time streaming
+### **AgentTaskStream** - Real-time streaming
 
 For long-running operations, use streaming to provide real-time updates to the client, this is decoupled from how the client receives the updates. If the client has initiated the request as streaming, the updates will be streamed to the client as they are generated. If the client has not initiated the request as streaming, the updates will get aggregated in taskStore allowing the client to either resubscribe to the task or poll for updates.
 
@@ -203,7 +206,7 @@ return context.stream(async (stream) => {
 
 ---
 
-## 🧩 Implementing `execute()`
+## Implementing `execute()`
 
 The `execute(context)` method is called when a new message is received.
 
@@ -211,7 +214,7 @@ Use the `context.stream(callback)` to emit streaming task updates. the callback 
 
 ---
 
-## 🛠 `AgentExecutionContext` Cheatsheet
+## `AgentExecutionContext` Cheatsheet
 
 ```ts
 // access the request context
@@ -231,7 +234,7 @@ context.stream(callback); // Begin a task stream
 
 ---
 
-## 📡 Streaming with `AgentTaskStream`
+## Streaming with `AgentTaskStream`
 
 Inside your stream callback, use the stream to emit task events or stream artifacts as they are generated:
 
@@ -266,11 +269,13 @@ The SDK handles:
 
 ---
 
-## ✨ Recommended Utilities
+## Recommended Utilities
 
 Use these helpers to avoid manual object construction.
 
-### 🧱 Parts
+### Parts
+
+Use `createTextPart`, `createFilePart`, and `createDataPart` to create parts for messages and artifacts.
 
 ```ts
 createTextPart("Hello");
@@ -278,9 +283,9 @@ createFilePart({ name: "report.pdf", uri: "..." });
 createDataPart({ name: "John Doe", age: 42 });
 ```
 
-### 💬 MessageHandler
+### MessageHandler
 
-use `MessageHandler` to create messages or parse message parts.
+Use `MessageHandler` to create messages or parse message parts.
 
 ```ts
 // create message
@@ -297,9 +302,9 @@ const files = new MessageHandler(message).getFiles();
 const data = new MessageHandler(message).getData();
 ```
 
-### 📦 ArtifactHandler
+### ArtifactHandler
 
-use `ArtifactHandler` to create artifacts or parse artifact parts.
+Use `ArtifactHandler` to create artifacts or parse artifact parts.
 
 ```ts
 // create artifact
@@ -314,17 +319,17 @@ const files = new ArtifactHandler(artifact).getFiles();
 const data = new ArtifactHandler(artifact).getData();
 ```
 
-### 🧠 TaskHandler (for advanced logic)
+### TaskHandler (for advanced logic)
 
-use `TaskHandler` to create tasks.
+Use `TaskHandler` to create tasks.
 
 ```ts
 new TaskHandler().withStatus({ state: "working", ... })
 ```
 
-### ❗ Error Builders
+### Error Builders
 
-use error builders to create A2A errors.
+Use error builders to create A2A errors.
 
 ```ts
 import { taskNotFoundError } from "@a2a/sdk/utils";
@@ -334,7 +339,7 @@ return taskNotFoundError("No such task");
 
 ---
 
-## 🧪 Testing Tips
+## Testing Tips
 
 - Use `/a2a` endpoint to POST A2A messages (JSON-RPC).
 - Use the `.well-known/agent.json` endpoint to advertise the agent card.
