@@ -1,0 +1,22 @@
+{
+  "name": "@a2alite/example-langgraph-agent",
+  "version": "0.0.1",
+  "description": "Langgraph Agent example using Fast A2A SDK",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "a2a:server": "tsx server.ts",
+    "a2a:client": "tsx client.ts",
+    "build": "tsc"
+  },
+  "dependencies": {
+    "@a2alite/sdk": "workspace:*",
+    "@hono/node-server": "^1.14.4",
+    "@langchain/langgraph": "^0.2.19",
+    "@langchain/core": "^0.3.31"
+  },
+  "devDependencies": {
+    "tsx": "^4.0.0",
+    "typescript": "^5.8.3"
+  }
+}
