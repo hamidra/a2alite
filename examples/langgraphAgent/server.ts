@@ -50,8 +50,8 @@ const agentCard: AgentCard = {
       tags: ["form", "collection", "job-order"],
     },
   ],
-  defaultInputModes: ["text"],
-  defaultOutputModes: ["text"],
+  defaultInputModes: ["text/plain"],
+  defaultOutputModes: ["text/plain"],
 };
 
 // LangGraph-based Job Order Form Agent

@@ -29,8 +29,8 @@ const agentCard: AgentCard = {
       tags: ["echo"],
     },
   ],
-  defaultInputModes: ["text"],
-  defaultOutputModes: ["text"],
+  defaultInputModes: ["text/plain"],
+  defaultOutputModes: ["text/plain"],
 };
 
 // Dummy executor implementing IAgentExecutor
