@@ -2,6 +2,15 @@
   "name": "@a2alite/sdk",
   "version": "0.0.4",
   "description": "A Modular SDK (Server & Client) for Agent to Agent (A2A) protocol, with easy task lifecycle management",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/hamidra/a2alite.git",
+    "directory": "packages/sdk"
+  },
+  "bugs": {
+    "url": "https://github.com/hamidra/a2alite/issues"
+  },
+  "homepage": "https://github.com/hamidra/a2alite",
   "keywords": [
     "A2A",
     "AI",
@@ -12,24 +21,27 @@
   "license": "Apache-2.0",
   "author": "Hamid Alipour",
   "type": "module",
-  "types": "dist/index.d.ts",
   "files": [
     "dist"
   ],
   "exports": {
     "./server": {
+      "types": "./dist/esm/server/index.d.ts",
       "import": "./dist/esm/server/index.js",
       "require": "./dist/cjs/server/index.js"
     },
     "./client": {
+      "types": "./dist/esm/client/index.d.ts",
       "import": "./dist/esm/client/index.js",
       "require": "./dist/cjs/client/index.js"
     },
     "./utils": {
+      "types": "./dist/esm/utils/index.d.ts",
       "import": "./dist/esm/utils/index.js",
       "require": "./dist/cjs/utils/index.js"
     },
     "./types": {
+      "types": "./dist/esm/types/types.d.ts",
       "import": "./dist/esm/types/types.js",
       "require": "./dist/cjs/types/types.js"
     }
