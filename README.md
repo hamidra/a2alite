@@ -1,10 +1,20 @@
-# 🤖 A2ALite Developer Guide
+# 🤖 A2A SDK Developer Guide
 
 **A2ALite** is a lightweight, modular SDK designed to make building **A2A-compliant servers** as simple as building HTTP servers. Inspired by familiar patterns from frameworks like Hono and Express, it offers a minimal, intuitive interface for rapid development.
 
 A2ALite handles the complexity of messaging, streaming, context and task management, and the JSON-RPC protocol, so you can focus entirely on your **agent’s execution logic**. It provides high-level primitives for managing A2A requests and responses, background tasks, and streaming data with ease.
 
 For comprehensive examples of how to implement an A2A-compliant server, explore the [examples](examples) directory.
+
+## Installation
+
+```bash
+// using npm
+npm install @a2alite/sdk
+
+// using pnpm
+pnpm add @a2alite/sdk
+```
 
 ## Key Features and Benefits
 
