@@ -1,4 +1,4 @@
-# 🤖↔️🤖 A2A SDK Developer Guide
+# 🤖 A2A SDK Developer Guide
 
 **A2ALite** is a lightweight, modular SDK designed to make building **A2A-compliant servers** as simple as building HTTP servers. Inspired by familiar patterns from frameworks like Hono and Express, it offers a minimal, intuitive interface for rapid development.
 
