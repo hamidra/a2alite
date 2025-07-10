@@ -1,6 +1,6 @@
 {
   "name": "@a2alite/sdk",
-  "version": "0.0.4",
+  "version": "0.0.5",
   "description": "A Modular SDK (Server & Client) for Agent to Agent (A2A) protocol, with easy task lifecycle management",
   "repository": {
     "type": "git",
