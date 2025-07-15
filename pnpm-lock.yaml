@@ -70,6 +70,9 @@ importers:
       '@langchain/langgraph':
         specifier: ^0.2.19
         version: 0.2.74(@langchain/core@0.3.62)(zod-to-json-schema@3.24.6(zod@3.25.51))
+      '@langchain/langgraph-checkpoint':
+        specifier: ^0.0.18
+        version: 0.0.18(@langchain/core@0.3.62)
     devDependencies:
       tsx:
         specifier: ^4.0.0
